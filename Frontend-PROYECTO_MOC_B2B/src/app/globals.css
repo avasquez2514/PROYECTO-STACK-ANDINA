@@ -1,0 +1,173 @@
+@import "tailwindcss";
+
+/**
+ * PHOENIX MOC-B2B Global Design System
+ * 
+ * Este archivo define el motor visual de la aplicación.
+ * Utiliza un sistema de variables CSS dinámicas para soportar temas Light/Dark
+ * con una estética futurista basada en glassmorphism y elementos neón.
+ */
+
+@layer base {
+  :root {
+    /* Tema Oscuro (Cyberpunk Deep Blue/Emerald) */
+    --background: #020617;
+    --foreground: #f8fafc;
+    --primary: #10b981;
+    --primary-glow: rgba(16, 185, 129, 0.25);
+    --secondary-glow: rgba(59, 130, 246, 0.15);
+    --card-bg: rgba(15, 23, 42, 0.7);
+    --border-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .light {
+    /* Tema Claro (Clean Glass/Emerald) */
+    --background: #f8fafc;
+    --foreground: #020617;
+    --primary: #059669;
+    --primary-glow: rgba(5, 150, 105, 0.15);
+    --secondary-glow: rgba(37, 99, 235, 0.1);
+    --card-bg: rgba(255, 255, 255, 0.8);
+    --border-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-attachment: fixed;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/**
+ * GLASSMORPHISM UTILITIES
+ * Efectos de paneles traslúcidos con desenfoque de fondo
+ */
+.glass-panel {
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+}
+
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.05);
+}
+
+/**
+ * CYBER GLOWS
+ * Efectos de resplandor para simular interfaces tipo HUD
+ */
+.glow-green {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+}
+
+.glow-text-green {
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+.glow-border-green {
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+/**
+ * PREMIUM SCROLLBAR
+ * Personalización de la barra de desplazamiento
+ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.2);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 185, 129, 0.4);
+}
+
+/**
+ * ANIMATIONS
+ * Micro-interacciones y efectos ambientales
+ */
+@keyframes pulse-slow {
+
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/**
+ * FONDOS DINÁMICOS
+ * Cuadrícula cibernética estructural
+ */
+.cyber-grid {
+  background-image: linear-gradient(rgba(16, 185, 129, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+/**
+ * ANIMACIONES PERSONALIZADAS
+ */
+@keyframes bounce-subtle {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s ease-in-out infinite;
+}
+
+@keyframes priority-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(225, 29, 72, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0);
+  }
+}
+
+.animate-priority {
+  animation: priority-pulse 2s infinite;
+}
