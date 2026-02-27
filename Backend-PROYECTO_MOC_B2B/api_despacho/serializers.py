@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Soporte, AsesorSoporte, Funcionario  # 👈 importa todos los modelos que usas
+from .models import Soporte, AsesorSoporte, Funcionario, HistorialEstadoAsesor
 
 
 class SoporteSerializer(serializers.ModelSerializer):
@@ -8,10 +8,19 @@ class SoporteSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class HistorialEstadoAsesorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HistorialEstadoAsesor
+        fields = '__all__'
+
+
 class AsesorSoporteSerializer(serializers.ModelSerializer):
+    historial_estados = HistorialEstadoAsesorSerializer(many=True, read_only=True)
+
     class Meta:
         model = AsesorSoporte
-        fields = '__all__'
+        fields = ['id', 'nombre_asesor', 'cedula', 'login', 'perfil', 'estado', 'ultimo_cambio_estado', 'historial_estados']
+
 
 class FuncionarioSerializer(serializers.ModelSerializer):
     class Meta:

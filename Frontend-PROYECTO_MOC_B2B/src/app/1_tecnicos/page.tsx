@@ -177,19 +177,13 @@ const TecnicosPage = () => {
 
   return (
     <div className={cn(
-      "min-h-screen text-slate-200 relative overflow-x-hidden cyber-grid transition-colors duration-300",
-      theme === "light" ? "light bg-slate-50 text-slate-900" : "bg-[#020617]"
+      "min-h-screen relative transition-colors duration-500",
+      theme === "light" ? "bg-slate-50 text-slate-900" : "bg-[#020617] text-slate-200"
     )}>
-      {/* Background FX: Efectos de luces ambientales de fondo */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className={cn(
-          "absolute top-[-10%] left-[-20%] w-[60%] h-[60%] rounded-full blur-[120px] animate-pulse-slow",
-          theme === "light" ? "bg-emerald-500/5" : "bg-emerald-500/10"
-        )} />
-        <div className={cn(
-          "absolute bottom-[-10%] right-[-20%] w-[60%] h-[60%] rounded-full blur-[120px] animate-pulse-slow",
-          theme === "light" ? "bg-blue-500/5" : "bg-blue-500/10"
-        )} style={{ animationDelay: '2s' }} />
+      {/* Background Effects */}
+      <div className="fixed inset-0 pointer-events-none opacity-20">
+        <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-blue-600 blur-[160px] rounded-full animate-pulse" />
+        <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-emerald-600 blur-[160px] rounded-full animate-pulse" />
       </div>
 
       <div className="relative z-10 p-4 md:p-8 max-w-[1200px] mx-auto space-y-8">

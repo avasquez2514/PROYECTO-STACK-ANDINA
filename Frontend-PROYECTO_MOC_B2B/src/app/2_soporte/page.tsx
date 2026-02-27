@@ -265,21 +265,20 @@ const SoportePage = () => {
   const totalCasos = datos.length;
   const resueltos = datos.filter(d => d.estado === "Resuelto").length;
   const enrutados = datos.filter(d => d.estado === "Enrutado").length;
-  const pendientes = datos.filter(d => !d.login_n1).length;
+  const pendientes = datos.filter(d => !d.login_n1 || d.login_n1 === "POR_ASIGNAR" || d.login_n1 === "").length;
   const porcentajeResolucion = totalCasos > 0 ? Math.round((resueltos / totalCasos) * 100) : 0;
 
   if (!hasMounted) return <div className="min-h-screen bg-[#020617]" />;
 
   return (
     <div className={cn(
-      "min-h-screen relative overflow-x-hidden cyber-grid transition-colors duration-300",
-      theme === "light" ? "light bg-slate-50 text-slate-900" : "bg-[#020617] text-slate-200"
+      "min-h-screen relative transition-colors duration-500",
+      theme === "light" ? "bg-slate-50 text-slate-900" : "bg-[#020617] text-slate-200"
     )}>
-      <div className="fixed inset-0 pointer-events-none">
-        <div className={cn(
-          "absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full blur-[150px] animate-pulse-slow",
-          theme === "light" ? "bg-emerald-500/5" : "bg-emerald-500/5"
-        )} />
+      {/* Background Effects */}
+      <div className="fixed inset-0 pointer-events-none opacity-20">
+        <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-blue-600 blur-[160px] rounded-full animate-pulse" />
+        <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-emerald-600 blur-[160px] rounded-full animate-pulse" />
       </div>
 
       <div className="flex flex-col lg:flex-row h-screen relative z-10">

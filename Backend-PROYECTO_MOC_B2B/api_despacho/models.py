@@ -65,6 +65,42 @@ class AsesorSoporte(models.Model):
     def __str__(self):
         return f"{self.nombre_asesor} ({self.login}) - {self.perfil}"
 
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        old_status = None
+        
+        if not is_new:
+            try:
+                # FECTH OLD STATUS BEFORE SUPER().SAVE()
+                old_instance = AsesorSoporte.objects.filter(pk=self.pk).values('estado').first()
+                if old_instance:
+                    old_status = old_instance['estado']
+            except Exception:
+                pass
+
+        super().save(*args, **kwargs)
+
+        # Si el estado cambió o es un registro nuevo
+        if is_new or old_status != self.estado:
+            from django.utils import timezone
+            now = timezone.now()
+
+            # Cerrar el historial anterior si existe
+            if not is_new:
+                ultimo_historial = HistorialEstadoAsesor.objects.filter(asesor=self, fecha_fin__isnull=True).first()
+                if ultimo_historial:
+                    ultimo_historial.fecha_fin = now
+                    delta = now - ultimo_historial.fecha_inicio
+                    ultimo_historial.duracion_segundos = int(delta.total_seconds())
+                    ultimo_historial.save()
+
+            # Crear nuevo historial
+            HistorialEstadoAsesor.objects.create(
+                asesor=self,
+                estado=self.estado,
+                fecha_inicio=now
+            )
+
 # 🔹 Nueva tabla para funcionarios
 class Funcionario(models.Model):
     id = models.AutoField(primary_key=True)
@@ -77,3 +113,18 @@ class Funcionario(models.Model):
 
     def __str__(self):
         return self.nombre_funcionario
+
+# 🔹 Nueva tabla para el historial de estados de asesores
+class HistorialEstadoAsesor(models.Model):
+    asesor = models.ForeignKey(AsesorSoporte, on_delete=models.CASCADE, related_name="historial_estados")
+    estado = models.CharField(max_length=50)
+    fecha_inicio = models.DateTimeField(auto_now_add=True)
+    fecha_fin = models.DateTimeField(null=True, blank=True)
+    duracion_segundos = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        db_table = "historial_estado_asesor"
+        ordering = ['-fecha_inicio']
+
+    def __str__(self):
+        return f"{self.asesor.login} - {self.estado} ({self.fecha_inicio})"
