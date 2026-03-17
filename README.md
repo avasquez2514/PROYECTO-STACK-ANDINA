@@ -1,4 +1,4 @@
-# 🚀 STACK ANDINA - Sistema de Gestión y Optimización Operativa
+# 🚀 STACK ANDINA - SIMOC
 👤 Autor
 Anderson Vásquez González
 
