@@ -1,4 +1,6 @@
 # 🚀 STACK ANDINA - Sistema de Gestión y Optimización Operativa
+👤 Autor
+Anderson Vásquez González
 
 ![Status](https://img.shields.io/badge/Status-En%20Desarrollo-green)
 ![Stack](https://img.shields.io/badge/Stack-React%20%7C%20Node.js%20%7C%20Python-blue)
