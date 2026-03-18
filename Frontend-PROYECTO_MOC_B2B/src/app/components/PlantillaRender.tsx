@@ -42,16 +42,19 @@ const PlantillaRender = ({
   nombreTecnico?: string;
   numeroInc?: string;
 }) => {
-  const today = new Date().toISOString().split("T")[0];
-
   // Efecto para sincronizar datos globales del formulario con la plantilla técnica específica
   useEffect(() => {
     const updates: Record<string, string> = {};
-    updates["Fecha"] = today;
+    const dateStr = new Date().toLocaleDateString('es-ES');
+    
+    // Forzar la fecha actual si no existe o está vacía
+    if (!formExtra["Fecha"]) {
+      updates["Fecha"] = dateStr;
+    }
 
-    // Auto-completar Incidente con nombre del técnico para facilitar lectura
-    if (numeroInc && nombreTecnico) {
-      updates["Inc"] = `${numeroInc} - ${nombreTecnico}`;
+    // Auto-completar Inc solo con el número de incidente (sin el nombre del técnico)
+    if (numeroInc) {
+      updates["Inc"] = numeroInc;
     }
 
     // Auto-completar Reparador
@@ -60,8 +63,16 @@ const PlantillaRender = ({
     }
 
     // Actualización masiva del estado para evitar múltiples re-renders
-    setFormExtra(prev => ({ ...prev, ...updates }));
-  }, [nombreTecnico, numeroInc, today, setFormExtra]);
+    if (Object.keys(updates).length > 0) {
+      setFormExtra(prev => {
+        const isDifferent = Object.entries(updates).some(([k, v]) => prev[k] !== v);
+        if (isDifferent) {
+          return { ...prev, ...updates };
+        }
+        return prev;
+      });
+    }
+  }, [nombreTecnico, numeroInc, setFormExtra]);
 
   return (
     <div className="space-y-6 bg-[#0A120E]/50 p-6 rounded-2xl border border-[#1A2E26] shadow-inner">
@@ -90,20 +101,12 @@ const PlantillaRender = ({
             ) : (
               <input
                 type={campo.type}
-                className={`w-full p-3 bg-[#050A08] border border-[#1A2E26] rounded-xl text-sm transition-all focus:outline-none focus:border-[#10b981] ${campo.label === "Fecha"
-                    ? "text-shadow-gray-50 cursor-not-allowed border-dashed"
-                    : "text-shadow-gray-50"
-                  } ${(campo.label === "Inc" || campo.label === "Reparador") && "text-[#10b981] font-medium"
-                  }`}
-                value={
-                  campo.label === "Fecha"
-                    ? formExtra[campo.label] || today
-                    : formExtra[campo.label] || ""
-                }
+                className={`w-full p-3 bg-[#050A08] border border-[#1A2E26] rounded-xl text-sm transition-all focus:outline-none focus:border-[#10b981] text-shadow-gray-50 ${(campo.label === "Inc" || campo.label === "Reparador") ? "text-[#10b981] font-medium" : ""}`}
+                value={formExtra[campo.label] || ""}
                 onChange={(e) =>
                   setFormExtra({ ...formExtra, [campo.label]: e.target.value })
                 }
-                readOnly={campo.label === "Fecha"} // La fecha es automática y no editable
+                readOnly={false}
               />
             )}
           </div>

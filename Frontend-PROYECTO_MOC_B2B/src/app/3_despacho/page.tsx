@@ -1,463 +1,471 @@
 "use client";
 
-/**
- * DespachoPage Component
- * 
- * Este componente es la terminal para el personal de despacho.
- * Permite visualizar la gestión en tiempo real, asignar prioridades 
- * y dejar observaciones de despacho para soporte.
- */
-
 import React, { useEffect, useState } from "react";
-import { Search, ClipboardList, MessageSquareText, Save, Sun, Moon, Zap, ShieldAlert, Clock, AlertTriangle, Radio, AlertCircle } from "lucide-react";
+import {
+  X, Search, ClipboardList,
+  ChevronDown, Zap, MessageSquare,
+  LayoutDashboard, CheckCircle2, AlertCircle, Clock
+} from "lucide-react";
+import ChatWindow from "../components/ChatWindow";
 
-/**
- * Utilidad para el manejo de clases dinámicas
- */
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
-const estadosGestion = ["En gestión", "Enrutado", "Resuelto", "Mal Escalado"];
-
-const coloresEstadoGestion: Record<string, string> = {
-    "En gestión": "bg-emerald-800 text-white",
-    "Enrutado": "bg-amber-200 text-amber-900",
-    "Resuelto": "bg-emerald-200 text-emerald-900",
-    "Mal Escalado": "bg-rose-700 text-white"
+const estadosAsesorConfig: Record<string, { bg: string, dot: string, border: string }> = {
+  "EN_GESTION": { bg: "bg-emerald-500/10 text-emerald-500", dot: "bg-emerald-500 shadow-emerald-500/50", border: "border-emerald-500/20" },
+  "EN_DESCANSO": { bg: "bg-slate-500/10 text-slate-400", dot: "bg-slate-500 shadow-slate-500/50", border: "border-white/5" },
+  "NO_DISPONIBLE": { bg: "bg-rose-500/10 text-rose-500", dot: "bg-rose-500 shadow-rose-500/50", border: "border-rose-500/20" },
+  "CASO_COMPLEJO": { bg: "bg-amber-500/10 text-amber-500", dot: "bg-amber-500 shadow-amber-500/50", border: "border-amber-500/20" }
 };
 
-const estadosAsesorConfig: Record<string, { bg: string, dot: string }> = {
-    "EN_GESTION": { bg: "bg-emerald-300 text-emerald-950", dot: "bg-emerald-500 shadow-emerald-500/50" },
-    "EN_DESCANSO": { bg: "bg-emerald-800 text-white", dot: "bg-rose-500 shadow-rose-500/50" },
-    "NO_DISPONIBLE": { bg: "bg-amber-200 text-amber-900", dot: "bg-rose-500 shadow-rose-500/50" },
-    "CASO_COMPLEJO": { bg: "bg-rose-700 text-white", dot: "bg-rose-500 shadow-rose-500/50" }
-};
+export default function DespachoPage() {
+  const [datos, setDatos] = useState<any[]>([]);
+  const [asesoresSoporte, setAsesoresSoporte] = useState<any[]>([]);
+  const [hasMounted, setHasMounted] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [loggedUser] = useState("DESPACHO");
 
-const DespachoPage = () => {
-    // --- ESTADOS ---
-    const [datos, setDatos] = useState<any[]>([]);
-    const [asesoresSoporte, setAsesoresSoporte] = useState<any[]>([]);
-    const [hasMounted, setHasMounted] = useState(false);
-    const [busqueda, setBusqueda] = useState("");
-    const [theme, setTheme] = useState("dark");
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Chat State
+  const [activeChatSoporteId, setActiveChatSoporteId] = useState<number | null>(null);
+  const [activeChatIncidente, setActiveChatIncidente] = useState<string>("");
 
-    const [modalConfig, setModalConfig] = useState<{
-        id: number;
-        campo: 'plantilla' | 'observaciones_ultima';
-        texto: string;
-    } | null>(null);
+  const [modalConfig, setModalConfig] = useState<{ id: number; text: string; title: string } | null>(null);
 
-    const toggleTheme = () => setTheme(prev => prev === "dark" ? "light" : "dark");
+  // Live Timer State
+  const [now, setNow] = useState(new Date());
 
-    const cargarDatos = async () => {
-        try {
-            const res = await fetch("http://127.0.0.1:8000/api/soporte/");
-            const json = await res.json();
-            const ordenados = json.sort((a: any, b: any) => b.id - a.id);
-            setDatos(ordenados);
-        } catch (error) {
-            console.error("Error cargando datos:", error);
-        }
-    };
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-    const cargarAsesores = async () => {
-        try {
-            const res = await fetch("http://127.0.0.1:8000/api/asesores/");
-            const data = await res.json();
+  useEffect(() => {
+    setHasMounted(true);
+    cargarDatos();
+    cargarAsesores();
+    const interval = setInterval(() => {
+      cargarDatos();
+      cargarAsesores();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
-            setAsesoresSoporte((prev: any[]) => {
-                return data.map((asesorAPI: any) => {
-                    // Sincronizar con lo que el asesor puso en su terminal (vía LocalStorage)
-                    const estadoGuardado = typeof window !== 'undefined' ? localStorage.getItem(`asesor_estado_${asesorAPI.id}`) : null;
-                    const asesorLocal = prev.find((p: any) => p.id === asesorAPI.id);
+  const cargarDatos = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/soporte/");
+      const json = await res.json();
+      setDatos(json.sort((a: any, b: any) => a.id - b.id));
+    } catch (e) { console.error(e); }
+  };
 
-                    return {
-                        ...asesorAPI,
-                        estado: asesorAPI.estado || (estadoGuardado || (asesorLocal?.estado || "NO_DISPONIBLE"))
-                    };
-                });
-            });
-        } catch (error) {
-            console.error("Error cargando asesores:", error);
-        }
-    };
+  const cargarAsesores = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/asesores/");
+      const data = await res.json();
+      setAsesoresSoporte(data);
+    } catch (e) { console.error(e); }
+  };
 
-    useEffect(() => {
-        setHasMounted(true);
-        cargarDatos();
-        cargarAsesores();
+  const formatearFecha = (f: string) => {
+    if (!f) return "---";
+    try {
+      const [datePart, rest] = f.split('T');
+      const timePart = rest.split('-')[0].split('+')[0].split('.')[0];
+      const [year, month, day] = datePart.split('-');
+      let [hour, minute, second] = timePart.split(':');
+      let h = parseInt(hour, 10);
+      const ampm = h >= 12 ? 'p. m.' : 'a. m.';
+      h = h % 12;
+      h = h ? h : 12;
+      return `${day}/${month}/${year} | ${h.toString().padStart(2, '0')}:${minute}:${second} ${ampm}`;
+    } catch {
+      return f;
+    }
+  };
 
-        // Escuchar cambios en otras pestañas automáticamente
-        const handleStorageChange = (e: StorageEvent) => {
-            if (e.key?.startsWith('asesor_estado_')) {
-                cargarAsesores();
-            }
-        };
-        window.addEventListener('storage', handleStorageChange);
+  const formatearPlantilla = (jsonString: string) => {
+    try {
+      const data = JSON.parse(jsonString);
+      return Object.entries(data)
+        .map(([key, val]) => {
+          let label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+          if (label.toLowerCase() === 'incidente') label = 'Inc';
+          return `${label}: ${val}`;
+        })
+        .join('\n');
+    } catch (e) {
+      return jsonString;
+    }
+  };
 
-        const intervalo = setInterval(() => {
-            cargarDatos();
-            cargarAsesores();
-        }, 2000);
+  const calcularTiempo = (inicio: string | null, fin: string | null) => {
+    if (!inicio) return "00h 00m 00s";
+    const start = new Date(inicio).getTime();
+    const end = fin ? new Date(fin).getTime() : now.getTime();
+    const diff = Math.max(0, end - start);
 
-        return () => {
-            clearInterval(intervalo);
-            window.removeEventListener('storage', handleStorageChange);
-        };
-    }, []);
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
 
-    const actualizarSoporte = async (id: number, campo: string, valor: any) => {
-        try {
-            await fetch(`http://127.0.0.1:8000/api/soporte/${id}/`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ [campo]: valor }),
-            });
-            cargarDatos();
-        } catch (error) { console.error("Error API Soporte:", error); }
-    };
+    return `${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`;
+  };
 
+  const datosFiltrados = datos.filter(d =>
+    !busqueda || d.incidente?.toLowerCase().includes(busqueda.toLowerCase()) || d.nombre?.toLowerCase().includes(busqueda.toLowerCase())
+  );
 
-    const guardarObservacionDespacho = async () => {
-        if (!modalConfig) return;
+  const stats = {
+    total: datos.length,
+    resueltos: datos.filter(d => d.estado === "Resuelto").length,
+    enrutados: datos.filter(d => d.estado === "Enrutado").length,
+    pendientes: datos.filter(d => !d.login_n1 || d.login_n1 === "POR_ASIGNAR").length
+  };
 
-        // Actualización optimista
-        setDatos(prev => prev.map(item =>
-            item.id === modalConfig.id ? { ...item, [modalConfig.campo]: modalConfig.texto } : item
-        ));
+  if (!hasMounted) return <div className="min-h-screen bg-[#060d14]" />;
 
-        await actualizarSoporte(modalConfig.id, "observaciones_ultima", modalConfig.texto);
-        setModalConfig(null);
-    };
+  return (
+    <div className="min-h-screen font-sans selection:bg-[#00e5a0]/30 overflow-hidden flex flex-col relative transition-colors duration-500 bg-[#060d14] text-white">
+      {/* Background Decor Effects */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div
+          className="absolute inset-0 transition-opacity duration-1000 opacity-40"
+          style={{
+            background: `
+              radial-gradient(ellipse 55% 65% at 10% 55%, #0a2a44 0%, transparent 65%),
+              radial-gradient(ellipse 45% 50% at 88% 18%, #082a1e 0%, transparent 60%),
+              radial-gradient(ellipse 40% 40% at 70% 85%, #051820 0%, transparent 60%),
+              #060d14
+            `
+          }}
+        />
+      </div>
 
-    /**
-     * Helper para formatear la plantilla técnica de JSON a texto legible
-     */
-    const formatearPlantillaParaEditor = (jsonString: string) => {
-        try {
-            const obj = JSON.parse(jsonString);
-            return Object.entries(obj)
-                .map(([key, value]) => `${key}: ${value}`)
-                .join("\n");
-        } catch (e) {
-            return jsonString; // Si no es JSON, devolver tal cual
-        }
-    };
-
-    const formatearFechaHora = (fechaStr: string) => {
-        if (!fechaStr) return "--/--/-- --:--";
-        const d = new Date(fechaStr);
-        const fecha = d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const hora = d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-        return `${fecha} | ${hora}`;
-    };
-
-    const handleCopyTemplate = (text: string) => {
-        navigator.clipboard.writeText(text);
-        alert("📋 Plantilla copiada al portapapeles");
-    };
-
-    const datosFiltrados = datos.filter((item) => {
-        if (!busqueda) return true;
-        return (item.incidente?.toLowerCase() || "").includes(busqueda.toLowerCase());
-    });
-
-    const totalCasos = datos.length;
-    const resueltos = datos.filter(d => d.estado === "Resuelto").length;
-    const enrutados = datos.filter(d => d.estado === "Enrutado").length;
-    const pendientes = datos.filter(d => !d.login_n1 || d.login_n1 === "POR_ASIGNAR" || d.login_n1 === "").length;
-
-    if (!hasMounted) return <div className="min-h-screen bg-[#020617]" />;
-
-    return (
-        <div className={cn(
-            "min-h-screen relative transition-colors duration-500",
-            theme === "light" ? "bg-slate-50 text-slate-900" : "bg-[#020617] text-slate-200"
-        )}>
-            {/* Background Effects */}
-            <div className="fixed inset-0 pointer-events-none opacity-20">
-                <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-blue-600 blur-[160px] rounded-full animate-pulse" />
-                <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-emerald-600 blur-[160px] rounded-full animate-pulse" />
+      <div className="relative z-10 flex h-screen">
+        {/* Sidebar - Advisor Status Section */}
+        <aside className="w-80 shrink-0 border-r flex flex-col transition-all duration-500 border-[#152233] bg-[#0b1621]/80 backdrop-blur-xl shadow-[10px_0_30px_rgba(0,0,0,0.5)]">
+          <div className="p-8 border-b flex items-center gap-4 border-white/5">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg hud-corners transition-colors bg-[#0b1621] border border-[#152233]">
+              <Zap className="text-amber-400" size={24} fill="currentColor" />
             </div>
-            <div className="flex flex-col lg:flex-row h-screen relative z-10">
-                <aside className={cn(
-                    "fixed inset-y-0 left-0 z-50 w-80 glass-panel border-r border-white/5 transition-transform duration-500 lg:translate-x-0 lg:static lg:block",
-                    sidebarOpen ? "translate-x-0" : "-translate-x-full"
-                )}>
-                    <div className="flex flex-col h-full">
-                        <div className="p-8 border-b border-white/5 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-slate-950 font-black text-2xl shadow-lg">D</div>
-                                <div>
-                                    <h1 className={cn("font-black text-xl tracking-tighter italic uppercase", theme === "light" ? "text-slate-900" : "text-white")}>
-                                        PHOENIX <span className="text-amber-500">DESP</span>
-                                    </h1>
-                                </div>
-                            </div>
-                            <button className="lg:hidden" onClick={() => setSidebarOpen(false)}><X size={20} /></button>
-                        </div>
+            <div>
+              <h1 className="font-black text-xl tracking-tighter italic uppercase drop-shadow-md text-white shadow-amber-400/50">
+                SIMOC <span className="text-amber-400"></span>
+              </h1>
+            </div>
+          </div>
 
-                        <div className="flex-1 p-6 space-y-6 overflow-y-auto custom-scrollbar">
-                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[.3em] px-2">ESTADO DE ASESORES</h3>
-                            <div className="space-y-4">
-                                {asesoresSoporte.map((asesor) => {
-                                    const casosAsignados = datos.filter(d => d.login_n1 === asesor.login).length;
-                                    return (
-                                        <div key={asesor.id} className="bg-[#0f172a]/40 border border-white/5 p-5 rounded-[1.5rem] group transition-all">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={cn(
-                                                        "w-10 h-10 rounded-full flex items-center justify-center text-[11px] font-black shadow-lg transition-colors",
-                                                        estadosAsesorConfig[asesor.estado]?.bg || 'bg-slate-700 text-white'
-                                                    )}>
-                                                        {asesor.login.substring(0, 2).toUpperCase()}
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className={cn("text-sm font-black tracking-tight uppercase", theme === "light" ? "text-slate-700" : "text-white")}>
-                                                            {asesor.login}
-                                                        </span>
-                                                        <span className="text-[9px] text-emerald-500 font-bold uppercase tracking-widest leading-none">
-                                                            {casosAsignados} CASOS
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className={cn(
-                                                    "w-2.5 h-2.5 rounded-full transition-all duration-300",
-                                                    estadosAsesorConfig[asesor.estado]?.dot || 'bg-slate-600'
-                                                )} />
-                                            </div>
-                                            <div className="mt-4 px-4 py-2 bg-slate-500/5 rounded-xl border border-white/5">
-                                                <p className="text-[9px] font-black text-slate-500 uppercase">{asesor.estado?.replace('_', ' ') || 'SIN ESTADO'}</p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] px-2 opacity-70 text-[#608096] glow-text-yellow mb-4">ASESORES EN LÍNEA</h3>
 
-                        <div className="p-8 border-t border-white/5 bg-slate-500/5">
-                            <p className="text-[10px] font-black text-slate-500 text-center uppercase tracking-widest">v1.2 Terminal Despacho</p>
-                        </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-6 px-2">
+              {asesoresSoporte.map((a, i) => {
+                const conf = estadosAsesorConfig[a.estado] || estadosAsesorConfig.NO_DISPONIBLE;
+                return (
+                  <div key={a.id} className="relative group flex flex-col items-center gap-2">
+                    <div
+                      className={cn(
+                        "relative w-16 h-16 rounded-full p-1 transition-all duration-500 border-2 flex items-center justify-center",
+                        a.estado === 'EN_GESTION' ? 'border-[#00e5a0] shadow-[0_0_15px_rgba(0,229,160,0.2)]' :
+                          a.estado === 'EN_DESCANSO' ? 'border-amber-400' :
+                            a.estado === 'NO_DISPONIBLE' ? 'border-rose-500' : 'border-white/10'
+                      )}
+                    >
+                      <div className={cn(
+                        "w-full h-full rounded-full flex items-center justify-center text-[14px] font-black shadow-inner bg-gradient-to-br",
+                        i === 0 ? "from-[#00e5a0] to-[#00b8e5] text-[#061511]" :
+                          i === 1 ? "from-[#00b8e5] to-[#0060e5] text-white" :
+                            "from-[#e5003d] to-[#800022] text-white"
+                      )}>
+                        {a.login.substring(0, 2).toUpperCase()}
+                      </div>
+
+                      {/* Status Dot Indicator */}
+                      <div className={cn(
+                        "absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-[#0b1621] shadow-lg",
+                        conf.dot
+                      )} />
                     </div>
-                </aside>
 
-                <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-                    <header className="h-24 glass-panel border-b border-white/5 flex items-center justify-between px-10 shrink-0">
-                        <div className="flex items-center gap-6">
-                            <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-slate-950 font-black text-2xl shadow-lg shadow-amber-500/20">D</div>
-                            <h2 className={cn("text-2xl font-black tracking-tighter italic uppercase", theme === "light" ? "text-slate-900" : "text-white")}>
-                                TERMINAL DE <span className="text-amber-500">DESPACHO</span>
-                            </h2>
-                            <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full animate-pulse">
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-                                <span className="text-[8px] font-black text-emerald-500 tracking-widest uppercase">Live Connection</span>
-                            </div>
-                        </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[9px] font-black text-white/80 uppercase tracking-tighter truncate max-w-[64px]">
+                        {a.login}
+                      </span>
+                      {/* Sub-label state */}
+                      <span className={cn("text-[7px] font-bold uppercase opacity-60", conf.bg.replace('bg-', 'text-'))}>
+                        {a.estado.substring(0, 10)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-                        <div className="flex items-center gap-6 flex-1 max-w-2xl mx-12">
-                            <div className="relative w-full group">
-                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                                <input
-                                    type="text"
-                                    placeholder="BUSCAR CASO POR INCIDENTE..."
-                                    value={busqueda}
-                                    onChange={(e) => setBusqueda(e.target.value)}
-                                    className={cn(
-                                        "w-full pl-14 pr-6 py-4 border rounded-2xl text-[10px] font-black tracking-widest outline-none transition-all uppercase",
-                                        theme === "light" ? "bg-white border-slate-200 text-slate-900" : "bg-slate-950/50 border-white/10 text-amber-500"
-                                    )}
-                                />
-                            </div>
-                        </div>
+          <div className="p-8 border-t border-white/5 bg-[#0b1621]/40">
+            <p className="text-[9px] font-black text-[#608096] text-center uppercase tracking-[0.3em] opacity-50">© 2026 SIMOC SYSTEM</p>
+          </div>
+        </aside>
 
-                        <div className="flex items-center gap-4">
-                            <button onClick={toggleTheme} className="p-3 glass-card rounded-2xl">
-                                {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-                            </button>
-                        </div>
-                    </header>
+        {/* Main Content Area */}
+        <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+          {/* Header */}
+          <header className="h-24 border-b flex items-center justify-between px-10 shrink-0 backdrop-blur-xl transition-all duration-500 border-[#152233] bg-[#0b1621]/60">
+            <div className="flex items-center gap-6">
+              <h2 className="text-2xl font-black tracking-tighter italic uppercase drop-shadow-md text-white">
+                TERMINAL DE <span className="text-amber-400">DESPACHO</span>
+              </h2>
+              <div className="flex items-center gap-2 px-3 py-1 bg-amber-400/10 border border-amber-400/30 rounded-full animate-pulse">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
+                <span className="text-[8px] font-black text-amber-400 tracking-widest uppercase">Live System</span>
+              </div>
+            </div>
 
-                    <main className="p-8 space-y-8 flex-1 overflow-y-auto custom-scrollbar">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                            {[
-                                { label: "CASOS TOTALES", value: totalCasos, icon: ClipboardList, color: "amber" },
-                                { label: "NODOS RESUELTOS", value: resueltos, icon: Save, color: "emerald" },
-                                { label: "ENRUTADOS", value: enrutados, icon: Radio, color: "blue" },
-                                { label: "PENDIENTES", value: pendientes, icon: AlertCircle, color: "rose" },
-                            ].map((stat, idx) => (
-                                <div key={idx} className="glass-panel p-6 rounded-[2rem] group hover:border-amber-500/40 transition-all relative overflow-hidden">
-                                    <div className="flex justify-between items-start mb-6">
-                                        <div className={cn("p-3 rounded-2xl bg-slate-500/10 border border-white/10", stat.color === 'emerald' ? "text-emerald-500" : stat.color === 'blue' ? "text-blue-500" : stat.color === 'rose' ? "text-rose-500" : "text-amber-500")}>
-                                            <stat.icon size={20} />
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-[8px] font-black text-slate-500 tracking-[.3em] uppercase">{stat.label}</p>
-                                            <p className={cn("text-3xl font-black italic tracking-tighter", theme === "light" ? "text-slate-900" : "text-white")}>{stat.value}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+            <div className="flex-1 max-w-2xl mx-12 relative group">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-4 w-4 text-[#00b8e5] group-focus-within:text-amber-400 transition-colors" />
+              <input
+                type="text"
+                placeholder="BUSCAR CASO POR INCIDENTE..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="w-full border rounded-2xl py-4 pl-16 pr-6 text-[10px] font-black tracking-[0.2em] outline-none transition-all uppercase placeholder:text-[#3a5c72] bg-[#060d14] border-[#152233] text-white focus:border-amber-400/50 focus:shadow-[0_0_20px_rgba(251,191,36,0.1)]"
+              />
+            </div>
 
-                        <div className="glass-panel rounded-[2.5rem] border-white/5 overflow-hidden flex flex-col shadow-2xl">
-                            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-slate-500/5">
-                                <h3 className={cn("text-[11px] font-black tracking-[.4em] px-4 flex items-center gap-3 uppercase", theme === "light" ? "text-slate-900" : "text-white")}>
-                                    MONITOREO DE GESTIONES ACTIVAS
-                                </h3>
-                            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full border border-white/10 bg-white/5 flex items-center justify-center">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_emerald]" />
+              </div>
+            </div>
 
-                            <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-250px)] custom-scrollbar">
-                                <table className="w-full text-left border-collapse min-w-[2000px]">
-                                    <thead>
-                                        <tr className={cn("text-[10px] font-black uppercase tracking-widest sticky top-0 z-20", theme === "light" ? "bg-slate-100 text-slate-500" : "bg-slate-950/95 text-slate-500 backdrop-blur-md")}>
-                                            <th className="px-8 py-6 border-b border-white/5">MARCA TEMPORAL</th>
-                                            <th className="px-6 py-6 border-b border-white/5 text-center">EN SITIO</th>
-                                            <th className="px-8 py-6 border-b border-white/5 min-w-[200px]">TÉCNICO</th>
-                                            <th className="px-8 py-6 border-b border-white/5">NUMERO INC</th>
-                                            <th className="px-8 py-6 border-b border-white/5">TORRE</th>
-                                            <th className="px-8 py-6 border-b border-white/5">GESTIÓN</th>
-                                            <th className="px-8 py-6 border-b border-white/5 min-w-[250px]">OBSERVACIONES TÉCNICAS</th>
-                                            <th className="px-8 py-6 border-b border-white/5">LOGIN N1</th>
-                                            <th className="px-8 py-6 border-b border-white/5">ESTADO</th>
-                                            <th className="px-8 py-6 border-b border-white/5">PLANTILLA</th>
-                                            <th className="px-8 py-6 border-b border-white/5">OBS. DESPACHO</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5">
-                                        {datosFiltrados.map((d) => (
-                                            <tr key={d.id} className="transition-all group border-l-4 hover:bg-amber-500/[0.03] border-transparent">
-                                                <td className="px-8 py-6">
-                                                    <p className="text-[9px] text-slate-400 font-mono whitespace-nowrap">{formatearFechaHora(d.fecha_hora)}</p>
-                                                </td>
-                                                <td className="px-6 py-6 text-center">
-                                                    <div className={cn("inline-block w-8 h-8 rounded-lg text-[9px] font-black border flex items-center justify-center", (d.en_sitio === "SI" || d.en_sitio === true) ? "text-emerald-500 border-emerald-500/30 bg-emerald-500/5" : "text-slate-500 border-white/10")}>{(d.en_sitio === "SI" || d.en_sitio === true) ? "SÍ" : "NO"}</div>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <p className="text-xs font-black uppercase tracking-tight">{d.nombre}</p>
-                                                    <p className="text-[10px] text-slate-500 font-mono mt-0.5">{d.celular}</p>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <span className="px-3 py-1 bg-amber-500/10 text-amber-500 rounded-lg font-mono font-black text-[10px] border border-amber-500/20">{d.incidente}</span>
-                                                </td>
-                                                <td className="px-8 py-6 text-[10px] font-bold text-slate-400">
-                                                    {d.torre}
-                                                </td>
-                                                <td className="px-8 py-6 text-center">
-                                                    <span className={cn("px-3 py-1 rounded-lg text-[9px] font-black uppercase border", d.gestion === 'ASESORIA' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500')}>
-                                                        {d.gestion}
-                                                    </span>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <p className="text-[11px] text-slate-500 italic line-clamp-2 max-w-[300px]">"{d.observaciones || "SIN DATOS..."}"</p>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 rounded-xl border border-white/5">
-                                                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                                                        <span className="text-[10px] font-black text-blue-400">{d.login_n1 === "POR_ASIGNAR" ? "PENDIENTE" : d.login_n1}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className={cn(
-                                                        "px-4 py-2 rounded-xl text-[9px] font-black uppercase border text-center",
-                                                        coloresEstadoGestion[d.estado || "En gestión"] || "bg-slate-900 text-slate-400 border-white/5"
-                                                    )}>
-                                                        {d.estado || "PENDIENTE"}
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <button
-                                                        onClick={() => {
-                                                            const textoFormateado = formatearPlantillaParaEditor(d.plantilla || "{}");
-                                                            setModalConfig({ id: d.id, campo: 'plantilla', texto: textoFormateado });
-                                                        }}
-                                                        className={cn(
-                                                            "p-3 rounded-xl transition-all border",
-                                                            (d.gestion === "CIERRE" || d.gestion === "ENRUTAR") ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-slate-950" : "bg-slate-500/10 border-white/5 text-slate-500"
-                                                        )}
-                                                    >
-                                                        <ClipboardList size={16} />
-                                                    </button>
-                                                </td>
-                                                <td className="px-8 py-6 text-center">
-                                                    <button
-                                                        onClick={() => setModalConfig({ id: d.id, campo: 'observaciones_ultima', texto: d.observaciones_ultima || "" })}
-                                                        className={cn(
-                                                            "p-3 rounded-xl transition-all border group relative",
-                                                            (d.observaciones_ultima && d.observaciones_ultima !== "Registro inicial de gestión")
-                                                                ? d.observaciones_ultima.startsWith("✅ VISTO")
-                                                                    ? "bg-emerald-500 text-slate-950 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.5)]"
-                                                                    : "bg-amber-400 text-slate-950 border-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.5)] animate-bounce-subtle"
-                                                                : "bg-slate-500/10 border-white/5 text-slate-500 hover:bg-amber-500/20 hover:text-amber-500"
-                                                        )}
-                                                        title={d.observaciones_ultima?.startsWith("✅ VISTO") ? "Novedad Vista por Soporte" : "Novedad para Soporte"}
-                                                    >
-                                                        <MessageSquareText size={16} className={cn((d.observaciones_ultima && d.observaciones_ultima !== "Registro inicial de gestión") ? "animate-pulse" : "")} />
-                                                        {(d.observaciones_ultima && d.observaciones_ultima !== "Registro inicial de gestión" && !d.observaciones_ultima.startsWith("✅ VISTO")) && (
-                                                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                                                                <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 border border-white"></span>
-                                                            </span>
-                                                        )}
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </main>
+          </header>
+
+          <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar relative">
+            {/* Stats Cards Section */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+              {[
+                { label: "CASOS TOTALES", value: stats.total, icon: ClipboardList, color: "text-blue-600", bgIcon: "bg-blue-50", borderColor: "border-blue-100" },
+                { label: "CASOS RESUELTOS", value: stats.resueltos, icon: CheckCircle2, color: "text-emerald-500", bgIcon: "bg-emerald-50", borderColor: "border-emerald-100" },
+                { label: "CASOS ENRUTADOS", value: stats.enrutados, icon: AlertCircle, color: "text-amber-500", bgIcon: "bg-amber-50", borderColor: "border-amber-100" },
+                { label: "EN ESPERA", value: stats.pendientes, icon: Clock, color: "text-rose-500", bgIcon: "bg-rose-50", borderColor: "border-rose-100" },
+              ].map((s, i) => (
+                <div key={i} className="p-6 rounded-2xl transition-all relative overflow-hidden group border bg-[#0b1621]/40 border-[#152233] shadow-lg">
+                  <div className="flex items-center gap-6 relative z-10">
+                    <div className={cn(
+                      "w-14 h-14 rounded-2xl border flex items-center justify-center transition-all group-hover:scale-110 bg-[#060d14] border-white/5 ",
+                      s.color
+                    )}>
+                      <s.icon size={24} strokeWidth={2.5} />
+                    </div>
+                    <div className="flex flex-col">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.2em] mb-1 text-[#608096]">{s.label}</p>
+                      <p className="text-4xl font-black italic tracking-tighter text-white">{s.value}</p>
+                    </div>
+                  </div>
                 </div>
-
-                {modalConfig && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl p-8 animate-in fade-in">
-                        <div className="bg-[#0f172a] border border-white/10 rounded-[3rem] shadow-2xl w-full max-w-2xl overflow-hidden p-10 space-y-8">
-                            <div className="flex justify-between items-center mb-6">
-                                <div className="flex items-center gap-3">
-                                    {modalConfig.campo === 'plantilla' ? <ClipboardList className="text-emerald-500" size={24} /> : <AlertTriangle className="text-amber-500" size={24} />}
-                                    <h2 className="text-2xl font-black text-white italic uppercase">
-                                        {modalConfig.campo === 'plantilla' ? "Visualizar Plantilla" : "Observación de Despacho"}
-                                    </h2>
-                                </div>
-                                <button onClick={() => setModalConfig(null)} className="p-3 bg-white/5 rounded-full"><X size={20} className="text-slate-400" /></button>
-                            </div>
-
-                            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
-                                {modalConfig.campo === 'plantilla' ? "Contenido técnico (Solo lectura):" : "Ingrese la novedad para soporte:"}
-                            </p>
-
-                            <textarea
-                                className={cn(
-                                    "w-full h-64 p-8 bg-slate-950/50 border border-white/10 rounded-[2rem] text-sm outline-none resize-none transition-all font-medium",
-                                    modalConfig.campo === 'plantilla' ? "text-emerald-400 font-mono" : "text-slate-200 focus:border-amber-500/50"
-                                )}
-                                value={modalConfig.texto}
-                                readOnly={modalConfig.campo === 'plantilla'}
-                                onChange={(e) => setModalConfig({ ...modalConfig, texto: e.target.value })}
-                                placeholder="Escriba aquí la novedad..."
-                            />
-
-                            <div className="flex gap-6">
-                                <button onClick={() => setModalConfig(null)} className="flex-1 px-8 py-5 border border-white/10 text-[10px] font-black uppercase rounded-2xl text-slate-500">Descartar</button>
-                                {modalConfig.campo === 'plantilla' ? (
-                                    <button onClick={() => handleCopyTemplate(modalConfig.texto)} className="flex-[2] px-8 py-5 bg-emerald-500 text-slate-950 font-black rounded-2xl uppercase shadow-lg shadow-emerald-500/20 text-xs">Copiar Datos</button>
-                                ) : (
-                                    <button onClick={guardarObservacionDespacho} className="flex-[2] px-8 py-5 bg-amber-500 text-slate-950 font-black rounded-2xl uppercase shadow-lg shadow-amber-500/20 text-xs">Guardar Novedad</button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
+              ))}
             </div>
+
+            {/* Main Table Section */}
+            <div className="rounded-[2.5rem] flex flex-col backdrop-blur-md border transition-all duration-500 bg-[#0b1621]/40 border-[#152233] shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+              <div className="p-8 border-b flex items-center justify-between bg-[#060d14]/50 border-[#152233]">
+                <div className="flex items-center gap-4">
+                  <div className="p-2.5 rounded-xl border bg-amber-400/10 border-amber-400/30">
+                    <LayoutDashboard className="text-amber-400" size={20} />
+                  </div>
+                  <h3 className="text-[12px] font-black uppercase tracking-[0.4em] drop-shadow-md text-white">MONITOREO DE GESTIONES ACTIVAS</h3>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left min-w-[1400px] border-collapse">
+                  <thead>
+                    <tr className="text-[9px] font-bold uppercase tracking-[0.1em] sticky top-0 z-20 text-[#608096] bg-[#060d14] border-b border-[#152233]">
+                      <th className="px-4 py-3">MARCA TEMPORAL</th>
+                      <th className="px-2 py-3 text-center">EN SITIO</th>
+                      <th className="px-4 py-3">TÉCNICO</th>
+                      <th className="px-4 py-3">CELULAR</th>
+                      <th className="px-4 py-3">TORRE ASIGNADA</th>
+                      <th className="px-4 py-3">NÚMERO INC</th>
+                      <th className="px-4 py-3 text-center">GESTIÓN</th>
+                      <th className="px-4 py-3 min-w-[250px]">OBS. TÉCNICAS</th>
+                      <th className="px-2 py-3 text-center">CHAT</th>
+                      <th className="px-2 py-3 text-center">PLANTILLA</th>
+                      <th className="px-2 py-3 text-center">LOGIN N1</th>
+                      <th className="px-2 py-3 text-center">ESTADO</th>
+                      <th className="px-4 py-3 text-right">TIEMPO</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#152233]/40">
+                    {datosFiltrados.map((d) => (
+                      <tr key={d.id} className="transition-all group border-l-4 border-transparent hover:border-amber-400/60 hover:bg-[#060d14]/60">
+                        <td className="px-4 py-3">
+                          <p className="text-[11px] font-bold tracking-tight text-slate-300">{formatearFecha(d.fecha_hora).split('|')[1]}</p>
+                          <p className="text-[9px] text-slate-400 font-medium">{formatearFecha(d.fecha_hora).split('|')[0]}</p>
+                        </td>
+                        <td className="px-2 py-3 text-center">
+                          <span className={cn(
+                            "text-[10px] font-black px-2.5 py-1 rounded-lg transition-all",
+                            d.en_sitio
+                              ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                              : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                          )}>
+                            {d.en_sitio ? "SI" : "NO"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-[11px] font-black uppercase tracking-tight text-white group-hover:text-amber-400 transition-colors">{d.nombre}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-[11px] font-bold text-slate-400">{d.celular || "---"}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-[11px] font-bold uppercase tracking-tighter truncate max-w-[150px] inline-block text-white">{d.torre}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="px-2.5 py-1 bg-[#0b1621] text-white rounded-lg font-mono font-black text-[10px] border border-white/20">
+                            {d.incidente || "INC-0000"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={cn(
+                            "px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight border",
+                            d.gestion === 'AUSENCIA' || d.gestion === 'ASESORIA' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                              d.gestion === 'DIRECTO' ? 'bg-orange-500/10 text-orange-600 border-orange-500/20' :
+                                'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                          )}>
+                            {d.gestion}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-[11px] font-medium italic line-clamp-1 max-w-[250px] text-[#608096]">
+                            {d.observaciones || "--"}
+                          </p>
+                        </td>
+                        <td className="px-2 py-3 text-center">
+                          <button
+                            onClick={() => {
+                              setActiveChatSoporteId(d.id);
+                              setActiveChatIncidente(d.incidente);
+                            }}
+                            className="p-2 border rounded-xl transition-all relative flex items-center justify-center mx-auto hover:bg-[#00e5a0]/5 bg-[#060d14] border-[#152233] text-[#608096]"
+                          >
+                            <MessageSquare size={14} strokeWidth={2} />
+                            {d.chat_visto_soporte === false && (
+                              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600 border-2 border-white"></span>
+                              </span>
+                            )}
+                          </button>
+                        </td>
+                        <td className="px-2 py-3 text-center">
+                          <button
+                            onClick={() => {
+                              const textoFormateado = formatearPlantilla(d.plantilla || "{}");
+                              setModalConfig({ id: d.id, text: textoFormateado, title: "PLANTILLA TÉCNICA" });
+                            }}
+                            className="p-2 border rounded-xl transition-all flex items-center justify-center mx-auto hover:bg-[#00b8e5]/5 bg-[#060d14] border-[#152233] text-[#608096]"
+                          >
+                            <ClipboardList size={14} strokeWidth={2} />
+                          </button>
+                        </td>
+                        <td className="px-2 py-3 text-center">
+                          <div
+                            className="w-32 border text-[9px] font-black uppercase py-2 px-3 rounded-xl flex items-center justify-between mx-auto bg-[#060d14] border-[#152233] text-white opacity-80"
+                          >
+                            <span className="truncate pr-2">{d.login_n1 === "POR_ASIGNAR" ? "--" : d.login_n1}</span>
+                            <ChevronDown size={10} className="text-white/40" />
+                          </div>
+                        </td>
+                        <td className="px-8 py-3 text-center">
+                          <div
+                            className={cn(
+                              "w-28 border text-[9px] font-black rounded-xl py-1.5 px-3 flex items-center justify-between mx-auto opacity-80",
+                              d.estado === 'Resuelto' || d.estado === 'ACTIVO' ? 'bg-emerald-600/10 text-emerald-600 border-emerald-600/20' :
+                                d.estado === 'En gestión' || d.estado === 'PENDIENTE' ? 'bg-[#00b8e5]/10 text-[#00b8e5] border-[#00b8e5]/20' :
+                                  d.estado === 'Enrutado' ? 'bg-amber-400/10 text-amber-400 border-amber-400/20' :
+                                    d.estado === 'Mal Escalado' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
+                                      "bg-[#060d14] text-white border-[#152233]"
+                            )}
+                          >
+                            <span className="truncate pr-1 uppercase">{d.estado || "---"}</span>
+                            <ChevronDown size={10} className="opacity-40" />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className={cn(
+                            "text-[10px] font-black px-3 py-1.5 rounded-xl transition-all inline-flex items-center gap-2",
+                            d.estado === 'Resuelto' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 animate-pulse-slow' :
+                              d.estado === 'Enrutado' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' :
+                                d.estado === 'Mal Escalado' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' :
+                                  'bg-white/5 text-white border border-white/10'
+                          )}>
+                            {!d.fecha_fin && d.fecha_inicio_sitio && (
+                              <div className="w-1 h-1 rounded-full bg-current animate-pulse shadow-[0_0_8px_currentColor]" />
+                            )}
+                            {calcularTiempo(d.fecha_inicio_sitio, d.fecha_fin)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* VISOR MODAL (READ-ONLY FOR DESPACHO) */}
+      {modalConfig && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-xl animate-in fade-in p-8 bg-[#060d14]/80">
+          <div className="border rounded-[3rem] shadow-[0_0_80px_rgba(0,0,0,0.8)] w-full max-w-3xl overflow-hidden flex flex-col h-[700px] hud-corners transition-all duration-500 bg-[#0b1621] border-[#152233]">
+            <div className="p-10 border-b flex justify-between items-center bg-[#060d14]/40 border-white/5">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 border rounded-2xl flex items-center justify-center transition-colors bg-[#00b8e5]/10 border-[#00b8e5]/30 text-[#00b8e5]">
+                  <ClipboardList size={24} />
+                </div>
+                <h2 className="text-3xl font-black italic uppercase tracking-tighter drop-shadow-lg text-white">{modalConfig.title}</h2>
+              </div>
+              <button onClick={() => setModalConfig(null)} className="p-4 rounded-2xl border transition-all bg-[#060d14] hover:bg-rose-500/10 text-white hover:text-rose-500 border-[#152233]">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="flex-1 p-10 overflow-hidden flex flex-col gap-6">
+              <p className="text-[10px] font-black text-[#00b8e5] uppercase tracking-[0.4em] opacity-80">CONTENIDO ESTRUCTURADO REGISTRADO</p>
+              <div className="flex-1 p-10 rounded-[2.5rem] border shadow-inner overflow-hidden flex flex-col bg-[#060d14] border-white/5">
+                <textarea
+                  className="w-full flex-1 bg-transparent text-sm font-mono whitespace-pre-wrap leading-relaxed outline-none resize-none custom-scrollbar text-white"
+                  value={modalConfig.text}
+                  readOnly={true}
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(modalConfig.text);
+                  }}
+                  className="w-full py-5 border-2 text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl transition-all duration-300 bg-[#0b1621] border-[#00b8e5]/40 text-[#00b8e5] hover:bg-[#00b8e5] hover:text-[#061511] shadow-[0_0_20px_rgba(0,184,229,0.1)]"
+                >
+                  Copiar información
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-    );
-};
+      )}
 
-const X = ({ size, className }: any) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-    </svg>
-);
-
-export default DespachoPage;
+      {/* CHAT WINDOW */}
+      {activeChatSoporteId !== null && (
+        <ChatWindow
+          soporteId={activeChatSoporteId}
+          incidente={activeChatIncidente}
+          remitenteActual={"DESPACHO"}
+          nombreRemitente={loggedUser}
+          onClose={() => setActiveChatSoporteId(null)}
+        />
+      )}
+    </div>
+  );
+}

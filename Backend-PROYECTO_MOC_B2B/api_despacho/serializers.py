@@ -1,11 +1,21 @@
 from rest_framework import serializers
-from .models import Soporte, AsesorSoporte, Funcionario, HistorialEstadoAsesor
+from .models import Soporte, AsesorSoporte, Funcionario, HistorialEstadoAsesor, ChatMessage
 
 
 class SoporteSerializer(serializers.ModelSerializer):
+    nombre_n1_completo = serializers.SerializerMethodField()
+
     class Meta:
         model = Soporte
         fields = '__all__'
+
+    def get_nombre_n1_completo(self, obj):
+        if obj.login_n1 and obj.login_n1 != "POR_ASIGNAR":
+            # Realizamos un pequeño cache o búsqueda rápida
+            from .models import AsesorSoporte
+            asesor = AsesorSoporte.objects.filter(login=obj.login_n1).first()
+            return asesor.nombre_asesor if asesor else obj.login_n1
+        return "PENDIENTE"
 
 
 class HistorialEstadoAsesorSerializer(serializers.ModelSerializer):
@@ -26,3 +36,8 @@ class FuncionarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Funcionario
         fields = "__all__"
+        
+class ChatMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChatMessage
+        fields = '__all__'

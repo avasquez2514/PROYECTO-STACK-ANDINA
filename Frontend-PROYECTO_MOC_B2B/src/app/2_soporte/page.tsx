@@ -1,562 +1,536 @@
 "use client";
 
-/**
- * SoportePage Component
- * 
- * Este componente es el centro de control para el personal de despacho y soporte.
- * Incluye monitoreo de estado de asesores, indicadores de rendimiento (HUD) 
- * y una tabla de gestión en tiempo real.
- */
-
 import React, { useEffect, useState, useRef } from "react";
-import { Menu, X, LogOut, Search, ClipboardList, MessageSquareText, FileText, Info, Radio, Save, AlertCircle, Sun, Moon, ChevronDown, Zap, AlertTriangle } from "lucide-react";
+import {
+  X, Search, ClipboardList, FileText,
+  ChevronDown, Zap, MessageSquare,
+  Activity, LayoutDashboard, CheckCircle2, AlertCircle, Clock, Image as ImageIcon
+} from "lucide-react";
+import ChatWindow from "../components/ChatWindow";
 
-/**
- * Utilidad para el manejo de clases dinámicas
- */
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
 const estadosGestion = ["En gestión", "Enrutado", "Resuelto", "Mal Escalado"];
 
-/**
- * Colores para el selector de estado de gestión
- */
 const coloresEstadoGestion: Record<string, string> = {
-  "En gestión": "bg-emerald-800 text-white",
-  "Enrutado": "bg-amber-200 text-amber-900",
-  "Resuelto": "bg-emerald-200 text-emerald-900",
-  "Mal Escalado": "bg-rose-700 text-white"
+  "En gestión": "bg-[#00b8e5]/10 text-[#00b8e5] border-[#00b8e5]/20",
+  "Enrutado": "bg-amber-400/10 text-amber-400 border-amber-400/20",
+  "Resuelto": "bg-emerald-600/10 text-emerald-600 border-emerald-600/20",
+  "Mal Escalado": "bg-rose-500/10 text-rose-500 border-rose-500/20"
 };
 
-/**
- * Configuración visual de los estados de los asesores
- */
-const estadosAsesorConfig: Record<string, { bg: string, dot: string }> = {
-  "EN_GESTION": { bg: "bg-emerald-300 text-emerald-950", dot: "bg-emerald-500 shadow-emerald-500/50" },
-  "EN_DESCANSO": { bg: "bg-emerald-800 text-white", dot: "bg-rose-500 shadow-rose-500/50" },
-  "NO_DISPONIBLE": { bg: "bg-amber-200 text-amber-900", dot: "bg-rose-500 shadow-rose-500/50" },
-  "CASO_COMPLEJO": { bg: "bg-rose-700 text-white", dot: "bg-rose-500 shadow-rose-500/50" }
+const estadosAsesorConfig: Record<string, { bg: string, dot: string, border: string }> = {
+  "EN_GESTION": { bg: "bg-emerald-500/10 text-emerald-500", dot: "bg-emerald-500 shadow-emerald-500/50", border: "border-emerald-500/20" },
+  "EN_DESCANSO": { bg: "bg-slate-500/10 text-slate-400", dot: "bg-slate-500 shadow-slate-500/50", border: "border-white/5" },
+  "NO_DISPONIBLE": { bg: "bg-rose-500/10 text-rose-500", dot: "bg-rose-500 shadow-rose-500/50", border: "border-rose-500/20" },
+  "CASO_COMPLEJO": { bg: "bg-amber-500/10 text-amber-500", dot: "bg-amber-500 shadow-amber-500/50", border: "border-amber-500/20" }
 };
 
-const SoportePage = () => {
-  // --- ESTADOS ---
-  const [datos, setDatos] = useState<any[]>([]); // Almacena las gestiones (filas de la tabla)
-  const [asesoresSoporte, setAsesoresSoporte] = useState<any[]>([]); // Lista de asesores N1
-  const [proximoAsesorLogin, setProximoAsesorLogin] = useState<string>(""); // Indicador visual
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Estado del menú lateral en móviles
-  const [hasMounted, setHasMounted] = useState(false); // Bandera para renderizado cliente
-  const [busqueda, setBusqueda] = useState(""); // Filtro de búsqueda por incidente
-  const [theme, setTheme] = useState("dark"); // Control de tema visual
+export default function SoportePage() {
+  const [datos, setDatos] = useState<any[]>([]);
+  const [asesoresSoporte, setAsesoresSoporte] = useState<any[]>([]);
+  const [hasMounted, setHasMounted] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [loggedUser, setLoggedUser] = useState("AVASQUEZ"); // Mock or from context
 
-  // Refs de control para evitar ejecuciones
-  const asignandoRef = useRef(false);
-  const inicioResetRef = useRef(false);
+  // Chat State
+  const [activeChatSoporteId, setActiveChatSoporteId] = useState<number | null>(null);
+  const [activeChatIncidente, setActiveChatIncidente] = useState<string>("");
 
-  // Configuración del modal de edición
-  const [modalConfig, setModalConfig] = useState<{
-    id: number;
-    campo: 'plantilla' | 'observaciones' | 'observaciones_ultima';
-    texto: string;
-    index: number;
-  } | null>(null);
+  const [modalConfig, setModalConfig] = useState<{ id: number; text: string; title: string; evidencias?: string[] } | null>(null);
 
-  const [alertaPrioridad, setAlertaPrioridad] = useState<{ id: number, incidente: string }[]>([]);
-  const priorityIdsRef = useRef<Set<number>>(new Set());
+  // Live Timer State
+  const [now, setNow] = useState(new Date());
 
-  /**
-   * Cambia el tema entre claro y oscuro
-   */
-  const toggleTheme = () => {
-    setTheme(prev => prev === "dark" ? "light" : "dark");
-  };
+  // Dropdown States
+  const [openDropdownId, setOpenDropdownId] = useState<{ id: number; type: 'login' | 'estado' } | null>(null);
+  const [openAdvisorDropdown, setOpenAdvisorDropdown] = useState<number | null>(null);
 
-  /**
-   * --- 1. CARGA DE DATOS ---
-   */
-  const cargarDatos = async () => {
-    try {
-      const res = await fetch("http://127.0.0.1:8000/api/soporte/");
-      const json = await res.json();
-      const ordenados = json.sort((a: any, b: any) => b.id - a.id);
-      setDatos(ordenados);
-    } catch (error) {
-      console.error("Error cargando datos:", error);
-    }
-  };
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-  /**
-   * --- 2. CARGA DE ASESORES ---
-   */
-  const cargarAsesores = async () => {
-    try {
-      const res = await fetch("http://127.0.0.1:8000/api/asesores/");
-      const data = await res.json();
-
-      setAsesoresSoporte(prev => {
-        return data.map((asesorAPI: any) => {
-          const asesorLocal = prev.find(p => p.id === asesorAPI.id);
-          // Buscamos en LocalStorage como respaldo
-          const estadoGuardado = typeof window !== 'undefined' ? localStorage.getItem(`asesor_estado_${asesorAPI.id}`) : null;
-
-          return {
-            ...asesorAPI,
-            estado: asesorAPI.estado || (estadoGuardado || (asesorLocal?.estado || "NO_DISPONIBLE"))
-          };
-        });
-      });
-    } catch (error) {
-      console.error("Error cargando asesores:", error);
-    }
-  };
-
-  /**
-   * --- POLLING ---
-   */
   useEffect(() => {
     setHasMounted(true);
     cargarDatos();
     cargarAsesores();
-
-    // Escuchar cambios en otras pestañas automáticamente
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key?.startsWith('asesor_estado_')) {
-        cargarAsesores();
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-
-    const intervalo = setInterval(() => {
+    const interval = setInterval(() => {
       cargarDatos();
       cargarAsesores();
-    }, 2000);
-
-    return () => {
-      clearInterval(intervalo);
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    }, 3000);
+    return () => clearInterval(interval);
   }, []);
 
-  /**
-   * --- 3. LÓGICA DE ASIGNACIÓN AUTOMÁTICA (DESACTIVADA) ---
-   * Los casos entran vacíos por solicitud del usuario.
-   */
-  useEffect(() => {
-    const prioritarios = datos.filter(d => d.es_prioridad);
-    const nuevosPrioritarios = prioritarios.filter(d => !priorityIdsRef.current.has(d.id));
+  const cargarDatos = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/soporte/");
+      const json = await res.json();
+      setDatos(json.sort((a: any, b: any) => a.id - b.id));
+    } catch (e) { console.error(e); }
+  };
 
-    if (nuevosPrioritarios.length > 0) {
-      setAlertaPrioridad(prioritarios.map(p => ({ id: p.id, incidente: p.incidente || 'SIN INC' })));
-      nuevosPrioritarios.forEach(d => priorityIdsRef.current.add(d.id));
-      console.log("🔥 ALERTA: NUEVA PRIORIDAD ASIGNADA");
-    } else {
-      if (prioritarios.length === 0 && alertaPrioridad.length > 0) {
-        setAlertaPrioridad([]);
-      } else if (prioritarios.length !== alertaPrioridad.length) {
-        setAlertaPrioridad(prioritarios.map(p => ({ id: p.id, incidente: p.incidente || 'SIN INC' })));
-      }
-    }
-  }, [datos]);
+  const cargarAsesores = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/asesores/");
+      const data = await res.json();
+      setAsesoresSoporte(data);
+    } catch (e) { console.error(e); }
+  };
 
-  // --- FUNCIONES COMUNICACIÓN API ---
-  const actualizarSoporte = async (id: number, campo: string, valor: any) => {
+  const actualizarSoporte = async (id: number, field: string, value: any) => {
     try {
       await fetch(`http://127.0.0.1:8000/api/soporte/${id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [campo]: valor }),
+        body: JSON.stringify({ [field]: value }),
       });
-    } catch (error) { console.error("Error API Soporte:", error); }
+      cargarDatos();
+    } catch (e) { console.error(e); }
   };
 
-  const actualizarEstadoAsesorAPI = async (idAsesor: number, nuevoEstado: string) => {
+  const handleCambioEstadoAsesor = async (id: number, nuevoEstado: string) => {
     try {
-      await fetch(`http://127.0.0.1:8000/api/asesores/${idAsesor}/`, {
+      await fetch(`http://127.0.0.1:8000/api/asesores/${id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ estado: nuevoEstado }),
       });
-    } catch (error) { console.error("Error API Asesor", error); }
-  }
-
-  const handleCambioEstadoAsesor = async (idAsesor: number, nuevoEstado: string) => {
-    // Actualización optimista
-    setAsesoresSoporte(prev => prev.map(a =>
-      a.id === idAsesor ? { ...a, estado: nuevoEstado } : a
-    ));
-
-    // Persistencia Local (mientras el backend se actualiza)
-    localStorage.setItem(`asesor_estado_${idAsesor}`, nuevoEstado);
-
-    await actualizarEstadoAsesorAPI(idAsesor, nuevoEstado);
+      cargarAsesores();
+    } catch (e) { console.error(e); }
   };
 
-  // --- UI HELPERS ---
-  const handleLoginChange = (id: number, nuevoLogin: string) => {
-    // Si el usuario selecciona vacío, volvemos al placeholder que el backend acepta
-    const loginParaBackend = nuevoLogin === "" ? "POR_ASIGNAR" : nuevoLogin;
-
-    setDatos(prev => prev.map(item =>
-      item.id === id ? { ...item, login_n1: loginParaBackend } : item
-    ));
-
-    actualizarSoporte(id, "login_n1", loginParaBackend);
-  };
-
-  const handleEstadoChange = (id: number, nuevoEstado: string) => {
-    setDatos(prev => prev.map(item =>
-      item.id === id ? { ...item, estado: nuevoEstado } : item
-    ));
-    actualizarSoporte(id, "estado", nuevoEstado);
-  };
-
-  const guardarDesdeModal = async () => {
-    if (!modalConfig) return;
-
-    setDatos(prev => prev.map(item =>
-      item.id === modalConfig.id ? { ...item, [modalConfig.campo]: modalConfig.texto } : item
-    ));
-
-    await actualizarSoporte(modalConfig.id, modalConfig.campo, modalConfig.texto);
-    cargarDatos(); // Sincronizar después de guardar
-    setModalConfig(null);
-  };
-
-  const notifyReading = async () => {
-    if (!modalConfig || modalConfig.campo !== 'observaciones_ultima') return;
-    const nuevoTexto = `✅ VISTO POR SOPORTE - ${modalConfig.texto}`;
-    await actualizarSoporte(modalConfig.id, 'observaciones_ultima', nuevoTexto);
-    cargarDatos();
-    setModalConfig(null);
-  };
-
-  const formatearFechaHora = (fechaStr: string) => {
-    if (!fechaStr) return "--/--/-- --:--";
-    const d = new Date(fechaStr);
-    const fecha = d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const hora = d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-    return `${fecha} | ${hora}`;
-  };
-
-  const handleCopyTemplate = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert("📋 Plantilla copiada al portapapeles");
-  };
-
-  /**
-   * Helper para formatear la plantilla técnica de JSON a texto legible
-   */
-  const formatearPlantillaParaEditor = (jsonString: string) => {
+  const formatearFecha = (f: string) => {
+    if (!f) return "---";
     try {
-      const obj = JSON.parse(jsonString);
-      return Object.entries(obj)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join("\n");
-    } catch (e) {
-      return jsonString; // Si no es JSON, devolver tal cual
+      // f is like "2026-03-17T22:02:37-05:00"
+      const [datePart, rest] = f.split('T');
+      const timePart = rest.split('-')[0].split('+')[0].split('.')[0];
+      
+      const [year, month, day] = datePart.split('-');
+      let [hour, minute, second] = timePart.split(':');
+      
+      let h = parseInt(hour, 10);
+      const ampm = h >= 12 ? 'p. m.' : 'a. m.';
+      h = h % 12;
+      h = h ? h : 12;
+      
+      return `${day}/${month}/${year} | ${h.toString().padStart(2, '0')}:${minute}:${second} ${ampm}`;
+    } catch {
+      return f;
     }
   };
 
-  const datosFiltrados = datos.filter((item) => {
-    if (!busqueda) return true;
-    return (item.incidente?.toLowerCase() || "").includes(busqueda.toLowerCase());
-  });
+  const formatearPlantilla = (jsonString: string) => {
+    try {
+      const data = JSON.parse(jsonString);
+      return Object.entries(data)
+        .map(([key, val]) => {
+          let label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+          if (label.toLowerCase() === 'incidente') label = 'Inc';
+          return `${label}: ${val}`;
+        })
+        .join('\n');
+    } catch (e) {
+      return jsonString;
+    }
+  };
+  const calcularTiempo = (inicio: string | null, fin: string | null) => {
+    if (!inicio) return "00h 00m 00s";
+    const start = new Date(inicio).getTime();
+    const end = fin ? new Date(fin).getTime() : now.getTime();
+    const diff = Math.max(0, end - start);
 
-  // --- CÁLCULO DE ESTADÍSTICAS ---
-  const totalCasos = datos.length;
-  const resueltos = datos.filter(d => d.estado === "Resuelto").length;
-  const enrutados = datos.filter(d => d.estado === "Enrutado").length;
-  const pendientes = datos.filter(d => !d.login_n1 || d.login_n1 === "POR_ASIGNAR" || d.login_n1 === "").length;
-  const porcentajeResolucion = totalCasos > 0 ? Math.round((resueltos / totalCasos) * 100) : 0;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
 
-  if (!hasMounted) return <div className="min-h-screen bg-[#020617]" />;
+    return `${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`;
+  };
+  const datosFiltrados = datos.filter(d =>
+    !busqueda || d.incidente?.toLowerCase().includes(busqueda.toLowerCase()) || d.nombre?.toLowerCase().includes(busqueda.toLowerCase())
+  );
+
+  const stats = {
+    total: datos.length,
+    resueltos: datos.filter(d => d.estado === "Resuelto").length,
+    enrutados: datos.filter(d => d.estado === "Enrutado").length,
+    pendientes: datos.filter(d => !d.login_n1 || d.login_n1 === "POR_ASIGNAR").length
+  };
+
+  if (!hasMounted) return <div className="min-h-screen bg-[#060d14]" />;
 
   return (
-    <div className={cn(
-      "min-h-screen relative transition-colors duration-500",
-      theme === "light" ? "bg-slate-50 text-slate-900" : "bg-[#020617] text-slate-200"
-    )}>
-      {/* Background Effects */}
-      <div className="fixed inset-0 pointer-events-none opacity-20">
-        <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-blue-600 blur-[160px] rounded-full animate-pulse" />
-        <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-emerald-600 blur-[160px] rounded-full animate-pulse" />
+    <div className="min-h-screen font-sans selection:bg-[#00e5a0]/30 overflow-hidden flex flex-col relative transition-colors duration-500 bg-[#060d14] text-white">
+      {/* Background Decor Effects */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div
+          className="absolute inset-0 transition-opacity duration-1000 opacity-40"
+          style={{
+            background: `
+              radial-gradient(ellipse 55% 65% at 10% 55%, #0a2a44 0%, transparent 65%),
+              radial-gradient(ellipse 45% 50% at 88% 18%, #082a1e 0%, transparent 60%),
+              radial-gradient(ellipse 40% 40% at 70% 85%, #051820 0%, transparent 60%),
+              #060d14
+            `
+          }}
+        />
       </div>
 
-      <div className="flex flex-col lg:flex-row h-screen relative z-10">
-        <aside className={cn(
-          "fixed inset-y-0 left-0 z-50 w-80 glass-panel border-r border-white/5 transition-transform duration-500 lg:translate-x-0 lg:static lg:block",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}>
-          <div className="flex flex-col h-full">
-            <div className="p-8 border-b border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-slate-950 font-black text-2xl shadow-lg">P</div>
-                <div>
-                  <h1 className={cn("font-black text-xl tracking-tighter italic uppercase", theme === "light" ? "text-slate-900" : "text-white")}>
-                    PHOENIX <span className="text-emerald-500">MOC</span>
-                  </h1>
-                </div>
-              </div>
-              <button className="lg:hidden" onClick={() => setSidebarOpen(false)}><X size={20} /></button>
+      <div className="relative z-10 flex h-screen">
+        {/* Sidebar - Advisor Status Section */}
+        <aside className="w-80 shrink-0 border-r flex flex-col transition-all duration-500 border-[#152233] bg-[#0b1621]/80 backdrop-blur-xl shadow-[10px_0_30px_rgba(0,0,0,0.5)]">
+          <div className="p-8 border-b flex items-center gap-4 border-white/5">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg hud-corners transition-colors bg-[#0b1621] border border-[#152233]">
+              <Zap className="text-[#00e5a0]" size={24} fill="currentColor" />
             </div>
+            <div>
+              <h1 className="font-black text-xl tracking-tighter italic uppercase drop-shadow-md text-white shadow-[#00e5a0]/50">
+                SIMOC<span className="text-[#00e5a0]"></span>
+              </h1>
+            </div>
+          </div>
 
-            <div className="flex-1 p-6 space-y-6 overflow-y-auto custom-scrollbar">
-              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[.3em] px-2">ESTADO DE ASESORES</h3>
-              <div className="space-y-4">
-                {asesoresSoporte.map((asesor) => {
-                  const casosAsignados = datos.filter(d => d.login_n1 === asesor.login).length;
-                  return (
-                    <div key={asesor.id} className="bg-[#0f172a]/40 border border-white/5 p-5 rounded-[1.5rem] group transition-all">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "w-10 h-10 rounded-full flex items-center justify-center text-[11px] font-black shadow-lg transition-colors",
-                            estadosAsesorConfig[asesor.estado]?.bg || 'bg-slate-700 text-white'
-                          )}>
-                            {asesor.login.substring(0, 2).toUpperCase()}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className={cn("text-xs font-black tracking-tight uppercase", theme === "light" ? "text-slate-700" : "text-white")}>
-                              {asesor.login}
-                            </span>
-                            <div className="flex flex-col gap-0.5 mt-0.5">
-                              <span className="text-[8px] text-emerald-500 font-bold uppercase tracking-widest leading-none">
-                                {casosAsignados} CASOS ASIGNADOS
-                              </span>
-                              {asesor.perfil && (
-                                <span className="text-[7px] text-blue-400 font-black uppercase tracking-[0.1em] px-1 py-0.5 bg-blue-500/10 rounded-sm w-fit border border-blue-500/20">
-                                  {asesor.perfil === 'TODO' ? 'GESTIÓN TOTAL' : asesor.perfil === 'EN_CIERRES' ? 'PERFIL CIERRES' : 'PERFIL SOPORTES'}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className={cn(
-                          "w-2.5 h-2.5 rounded-full transition-all duration-300",
-                          estadosAsesorConfig[asesor.estado]?.dot || 'bg-slate-600'
-                        )} />
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] px-2 opacity-70 text-[#608096] glow-text-green mb-4">ASESORES EN LÍNEA</h3>
+
+            <div className="flex flex-wrap gap-x-4 gap-y-6 px-2">
+              {asesoresSoporte.map((a, i) => {
+                const conf = estadosAsesorConfig[a.estado] || estadosAsesorConfig.NO_DISPONIBLE;
+                return (
+                  <div key={a.id} className="relative group flex flex-col items-center gap-2">
+                    <button
+                      onClick={() => setOpenAdvisorDropdown(openAdvisorDropdown === a.id ? null : a.id)}
+                      className={cn(
+                        "relative w-16 h-16 rounded-full p-1 transition-all duration-500 hover:scale-110 active:scale-95 border-2 flex items-center justify-center",
+                        a.estado === 'EN_GESTION' ? 'border-[#00e5a0] shadow-[0_0_15px_rgba(0,229,160,0.2)]' :
+                          a.estado === 'EN_DESCANSO' ? 'border-amber-400' :
+                            a.estado === 'NO_DISPONIBLE' ? 'border-rose-500' : 'border-white/10'
+                      )}
+                    >
+                      <div className={cn(
+                        "w-full h-full rounded-full flex items-center justify-center text-[14px] font-black shadow-inner bg-gradient-to-br",
+                        i === 0 ? "from-[#00e5a0] to-[#00b8e5] text-[#061511]" :
+                          i === 1 ? "from-[#00b8e5] to-[#0060e5] text-white" :
+                            "from-[#e5003d] to-[#800022] text-white"
+                      )}>
+                        {a.login.substring(0, 2).toUpperCase()}
                       </div>
-                      <div className="relative">
-                        <select
-                          value={asesor.estado || "NO_DISPONIBLE"}
-                          onChange={(e) => handleCambioEstadoAsesor(asesor.id, e.target.value)}
-                          className={cn(
-                            "w-full text-[10px] font-black uppercase py-3 px-4 rounded-xl border outline-none cursor-pointer appearance-none transition-all",
-                            theme === "light" ? "bg-white border-slate-200 text-slate-600" : "bg-[#020617] border-white/5 text-slate-300"
-                          )}
-                        >
-                          <option value="EN_GESTION">EN GESTIÓN</option>
-                          <option value="EN_DESCANSO">EN DESCANSO</option>
-                          <option value="NO_DISPONIBLE">NO DISPONIBLE</option>
-                          <option value="CASO_COMPLEJO">CASO COMPLEJO</option>
-                        </select>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                          <ChevronDown size={14} />
-                        </div>
-                      </div>
+
+                      {/* Status Dot Indicator */}
+                      <div className={cn(
+                        "absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-[#0b1621] shadow-lg",
+                        conf.dot
+                      )} />
+                    </button>
+
+                    <div className="flex flex-col items-center">
+                      <span className="text-[9px] font-black text-white/80 uppercase tracking-tighter truncate max-w-[64px]">
+                        {a.login}
+                      </span>
+                      {/* Sub-label state */}
+                      <span className={cn("text-[7px] font-bold uppercase opacity-60", conf.bg.replace('bg-', 'text-'))}>
+                        {a.estado.substring(0, 10)}
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
 
-            <div className="p-8 border-t border-white/5 bg-slate-500/5">
-              <button className="w-full flex items-center justify-center gap-3 p-4 text-slate-500 font-black text-[10px] uppercase tracking-widest hover:text-rose-500 transition-all group">
-                <LogOut className="h-4 w-4" /> Salir del Sistema
-              </button>
+                    {/* Personal Dropdown Menu */}
+                    {openAdvisorDropdown === a.id && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setOpenAdvisorDropdown(null)} />
+                        <div className="absolute top-[85%] left-1/2 -translate-x-1/2 mt-2 w-40 z-50 rounded-2xl border border-[#152233] bg-[#0b1621]/98 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                          <div className="p-3 border-b border-white/5 bg-white/5">
+                            <p className="text-[8px] font-black text-white/40 uppercase tracking-widest text-center">Cambiar mi estado</p>
+                          </div>
+                          {Object.keys(estadosAsesorConfig).map(est => (
+                            <button
+                              key={est}
+                              onClick={() => {
+                                handleCambioEstadoAsesor(a.id, est);
+                                setOpenAdvisorDropdown(null);
+                              }}
+                              className={cn(
+                                "w-full px-5 py-3 text-[9px] font-black text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 uppercase flex items-center gap-3",
+                                a.estado === est ? "text-[#00e5a0] bg-[#00e5a0]/5" : "text-white/60"
+                              )}
+                            >
+                              <div className={cn("w-2 h-2 rounded-full", estadosAsesorConfig[est].dot)} />
+                              {est.replace('_', ' ')}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+          </div>
+
+          <div className="p-8 border-t border-white/5 bg-[#0b1621]/40">
+            <p className="text-[9px] font-black text-[#608096] text-center uppercase tracking-[0.3em] opacity-50">© 2026 SIMOC SYSTEM</p>
           </div>
         </aside>
 
+        {/* Main Content Area */}
         <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-          <header className="h-24 glass-panel border-b border-white/5 flex items-center justify-between px-10 shrink-0">
-            <h2 className={cn("text-2xl font-black tracking-tighter italic uppercase", theme === "light" ? "text-slate-900" : "text-white")}>
-              CONSOLA DE <span className="text-emerald-500">SOPORTE</span>
-            </h2>
-            <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full animate-pulse mr-auto ml-6">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-              <span className="text-[8px] font-black text-emerald-500 tracking-widest uppercase">Live Connection</span>
+          {/* Header */}
+          <header className="h-24 border-b flex items-center justify-between px-10 shrink-0 backdrop-blur-xl transition-all duration-500 border-[#152233] bg-[#0b1621]/60">
+            <div className="flex items-center gap-6">
+              <h2 className="text-2xl font-black tracking-tighter italic uppercase drop-shadow-md text-white">
+                TERMINAL DE <span className="text-[#00e5a0]">SOPORTE</span>
+              </h2>
+              <div className="flex items-center gap-2 px-3 py-1 bg-[#00e5a0]/10 border border-[#00e5a0]/30 rounded-full animate-pulse">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#00e5a0] shadow-[0_0_8px_#00e5a0]" />
+                <span className="text-[8px] font-black text-[#00e5a0] tracking-widest uppercase">Live System</span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-6 flex-1 max-w-2xl mx-12">
-              <div className="relative w-full group">
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder="BUSCAR POR INCIDENTE..."
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  className={cn(
-                    "w-full pl-14 pr-6 py-4 border rounded-2xl text-[10px] font-black tracking-widest outline-none transition-all uppercase",
-                    theme === "light" ? "bg-white border-slate-200 text-slate-900" : "bg-slate-950/50 border-white/10 text-emerald-400"
-                  )}
-                />
-              </div>
+            <div className="flex-1 max-w-2xl mx-12 relative group">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-4 w-4 text-[#00b8e5] group-focus-within:text-[#00e5a0] transition-colors" />
+              <input
+                type="text"
+                placeholder="BUSCAR CASO POR INCIDENTE..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="w-full border rounded-2xl py-4 pl-16 pr-6 text-[10px] font-black tracking-[0.2em] outline-none transition-all uppercase placeholder:text-[#3a5c72] bg-[#060d14] border-[#152233] text-white focus:border-[#00e5a0]/50 focus:shadow-[0_0_20px_rgba(0,229,160,0.1)]"
+              />
             </div>
 
             <div className="flex items-center gap-4">
-              <button onClick={toggleTheme} className="p-3 glass-card rounded-2xl">
-                {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-              </button>
+              {/* Theme toggle removed */}
             </div>
+
           </header>
 
-          <div className="p-8 space-y-8 flex-1 overflow-y-auto custom-scrollbar relative">
-            {alertaPrioridad.length > 0 && (
-              <div className="fixed top-28 left-1/2 -translate-x-1/2 z-[100] animate-bounce-subtle">
-                <div className="bg-rose-600 text-white px-8 py-4 rounded-2xl shadow-[0_0_30px_rgba(225,29,72,0.6)] flex items-center gap-4 border border-rose-400">
-                  <Zap size={20} fill="white" className="animate-pulse" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-[.2em]">ALERTA DE DESPACHO</span>
-                    <span className="text-sm font-black italic">ATENCIÓN: {alertaPrioridad.length} CASOS MARCADOS COMO PRIORIDAD</span>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar relative">
+            {/* Stats Cards Section */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
               {[
-                { label: "CASOS TOTALES", value: totalCasos, icon: ClipboardList, color: "emerald" },
-                { label: "NODOS RESUELTOS", value: resueltos, icon: Save, color: "emerald" },
-                { label: "ENRUTADOS", value: enrutados, icon: Radio, color: "blue" },
-                { label: "PENDIENTES", value: pendientes, icon: AlertCircle, color: "amber" },
-              ].map((stat, idx) => (
-                <div key={idx} className="glass-panel p-6 rounded-[2rem] group hover:border-emerald-500/40 transition-all relative overflow-hidden">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className={cn("p-3 rounded-2xl bg-slate-500/10 border border-white/10", stat.color === 'emerald' ? "text-emerald-500" : stat.color === 'blue' ? "text-blue-500" : "text-amber-500")}>
-                      <stat.icon size={20} />
+                { label: "CASOS TOTALES", value: stats.total, icon: ClipboardList, color: "text-blue-600", bgIcon: "bg-blue-50", borderColor: "border-blue-100" },
+                { label: "CASOS RESUELTOS", value: stats.resueltos, icon: CheckCircle2, color: "text-emerald-500", bgIcon: "bg-emerald-50", borderColor: "border-emerald-100" },
+                { label: "CASOS ENRUTADOS", value: stats.enrutados, icon: AlertCircle, color: "text-amber-500", bgIcon: "bg-amber-50", borderColor: "border-amber-100" },
+                { label: "EN ESPERA", value: stats.pendientes, icon: Clock, color: "text-rose-500", bgIcon: "bg-rose-50", borderColor: "border-rose-100" },
+              ].map((s, i) => (
+                <div key={i} className="p-6 rounded-2xl transition-all relative overflow-hidden group border bg-[#0b1621]/40 border-[#152233] shadow-lg">
+                  <div className="flex items-center gap-6 relative z-10">
+                    <div className={cn(
+                      "w-14 h-14 rounded-2xl border flex items-center justify-center transition-all group-hover:scale-110 bg-[#060d14] border-white/5 ",
+                      s.color
+                    )}>
+                      <s.icon size={24} strokeWidth={2.5} />
                     </div>
-                    <div className="text-right">
-                      <p className="text-[8px] font-black text-slate-500 tracking-[.3em] uppercase">{stat.label}</p>
-                      <p className={cn("text-3xl font-black italic tracking-tighter", theme === "light" ? "text-slate-900" : "text-white")}>{stat.value}</p>
+                    <div className="flex flex-col">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.2em] mb-1 text-[#608096]">{s.label}</p>
+                      <p className="text-4xl font-black italic tracking-tighter text-white">{s.value}</p>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="glass-panel rounded-[2.5rem] border-white/5 overflow-hidden flex flex-col shadow-2xl">
-              <div className="p-6 border-b border-white/5 flex justify-between items-center bg-slate-500/5">
-                <h3 className={cn("text-[11px] font-black tracking-[.4em] px-4 flex items-center gap-3 uppercase", theme === "light" ? "text-slate-900" : "text-white")}>
-                  LISTADO DE GESTIONES RECIENTES
-                </h3>
+            {/* Main Table Section */}
+            <div className="rounded-[2.5rem] flex flex-col backdrop-blur-md border transition-all duration-500 bg-[#0b1621]/40 border-[#152233] shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+              <div className="p-8 border-b flex items-center justify-between bg-[#060d14]/50 border-[#152233]">
+                <div className="flex items-center gap-4">
+                  <div className="p-2.5 rounded-xl border bg-[#00e5a0]/10 border-[#00e5a0]/30">
+                    <LayoutDashboard className="text-[#00e5a0]" size={20} />
+                  </div>
+                  <h3 className="text-[12px] font-black uppercase tracking-[0.4em] drop-shadow-md text-white">MONITOREO DE GESTIONES ACTIVAS</h3>
+                </div>
               </div>
 
-              <div className="overflow-x-auto overflow-y-auto max-h-[800px] custom-scrollbar">
-                <table className="w-full text-left border-collapse min-w-[2000px]">
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left min-w-[1400px] border-collapse">
                   <thead>
-                    <tr className={cn("text-[10px] font-black uppercase tracking-widest", theme === "light" ? "bg-slate-100 text-slate-500" : "bg-slate-950/80 text-slate-500")}>
-                      <th className="px-8 py-6 border-b border-white/5">MARCA TEMPORAL</th>
-                      <th className="px-6 py-6 border-b border-white/5 text-center">EN SITIO</th>
-                      <th className="px-8 py-6 border-b border-white/5 min-w-[200px]">NOMBRE FUNCIONARIO</th>
-                      <th className="px-8 py-6 border-b border-white/5">NUMERO CELULAR</th>
-                      <th className="px-8 py-6 border-b border-white/5">TORRE ASIGNADA</th>
-                      <th className="px-8 py-6 border-b border-white/5">NUMERO INC</th>
-                      <th className="px-8 py-6 border-b border-white/5 text-center">GESTIÓN REQUERIDA</th>
-                      <th className="px-8 py-6 border-b border-white/5 min-w-[180px]">OBSERVACIONES</th>
-                      <th className="px-8 py-6 border-b border-white/5">PLANTILLA</th>
-                      <th className="px-8 py-6 border-b border-white/5">LOGIN N1</th>
-                      <th className="px-8 py-6 border-b border-white/5">ESTADO GESTION</th>
-                      <th className="px-8 py-6 border-b border-white/5">OBS. DESPACHO</th>
+                    <tr className="text-[9px] font-bold uppercase tracking-[0.1em] sticky top-0 z-20 text-[#608096] bg-[#060d14] border-b border-[#152233]">
+                      <th className="px-4 py-3">MARCA TEMPORAL</th>
+                      <th className="px-2 py-3 text-center">EN SITIO</th>
+                      <th className="px-4 py-3">TÉCNICO</th>
+                      <th className="px-4 py-3">CELULAR</th>
+                      <th className="px-4 py-3">TORRE ASIGNADA</th>
+                      <th className="px-4 py-3">NÚMERO INC</th>
+                      <th className="px-4 py-3 text-center">GESTIÓN</th>
+                      <th className="px-4 py-3 min-w-[250px]">OBS. TÉCNICAS</th>
+                      <th className="px-2 py-3 text-center">CHAT</th>
+                      <th className="px-2 py-3 text-center">PLANTILLA</th>
+                      <th className="px-2 py-3 text-center">LOGIN N1</th>
+                      <th className="px-2 py-3 text-center">ESTADO</th>
+                      <th className="px-4 py-3 text-right">TIEMPO</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {datosFiltrados.map((d, i) => (
-                      <tr key={d.id} className={cn(
-                        "transition-all group border-l-4",
-                        d.es_prioridad
-                          ? "bg-rose-500/10 border-rose-500 shadow-[inset_10px_0_20px_-10px_rgba(225,29,72,0.2)]"
-                          : "hover:bg-emerald-500/[0.03] border-transparent"
-                      )}>
-                        <td className="px-8 py-6">
-                          <p className="text-[9px] text-slate-400 font-mono whitespace-nowrap">{formatearFechaHora(d.fecha_hora)}</p>
+                  <tbody className="divide-y divide-[#152233]/40">
+                    {datosFiltrados.map((d) => (
+                      <tr key={d.id} className="transition-all group border-l-4 border-transparent hover:border-[#00e5a0]/60 hover:bg-[#060d14]/60">
+                        <td className="px-4 py-3">
+                          <p className="text-[11px] font-bold tracking-tight text-slate-300">{formatearFecha(d.fecha_hora).split('|')[1]}</p>
+                          <p className="text-[9px] text-slate-400 font-medium">{formatearFecha(d.fecha_hora).split('|')[0]}</p>
                         </td>
-                        <td className="px-6 py-6 text-center">
-                          <div className={cn("inline-block w-8 h-8 rounded-lg text-[9px] font-black items-center justify-center border", (d.en_sitio === "SI" || d.en_sitio === true) ? "text-emerald-500 border-emerald-500/30" : "text-slate-500 border-white/10")}>{(d.en_sitio === "SI" || d.en_sitio === true) ? "SÍ" : "NO"}</div>
+                        <td className="px-2 py-3 text-center">
+                          <span className={cn(
+                            "text-[10px] font-black px-2.5 py-1 rounded-lg transition-all",
+                            d.en_sitio
+                              ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                              : "bg-slate-100/50 text-slate-400 border border-slate-200"
+                          )}>
+                            {d.en_sitio ? "SI" : "NO"}
+                          </span>
                         </td>
-                        <td className="px-8 py-6">
-                          <p className="text-xs font-black uppercase tracking-tight">{d.nombre}</p>
+                        <td className="px-4 py-3">
+                          <span className="text-[11px] font-black uppercase tracking-tight text-white">{d.nombre}</span>
                         </td>
-                        <td className="px-8 py-6">
-                          <span className="text-xs font-bold font-mono text-slate-500">{d.celular}</span>
+                        <td className="px-4 py-3">
+                          <span className="text-[11px] font-bold text-slate-400">{d.celular || "315 --"}</span>
                         </td>
-                        <td className="px-8 py-6">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{d.torre}</span>
+                        <td className="px-4 py-3">
+                          <span className="text-[11px] font-bold uppercase tracking-tighter truncate max-w-[150px] inline-block text-white">{d.torre}</span>
                         </td>
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-2">
-                            <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-lg font-mono font-black text-[10px] border border-emerald-500/20">{d.incidente}</span>
-                            {d.es_prioridad && (
-                              <div className="flex items-center gap-1 px-2 py-1 bg-rose-500 text-white text-[8px] font-black rounded-md animate-pulse">
-                                <Zap size={8} fill="currentColor" /> PRIORIDAD
-                              </div>
-                            )}
-                          </div>
+                        <td className="px-4 py-3">
+                          <span className="px-2.5 py-1 bg-[#0b1621] text-white rounded-lg font-mono font-black text-[10px] border border-white/20">
+                            {d.incidente || "INC-0000"}
+                          </span>
                         </td>
-                        <td className="px-8 py-6 text-center">
-                          <span className={cn("px-3 py-1 rounded-lg text-[9px] font-black uppercase border", d.gestion === 'ASESORIA' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500')}>{d.gestion}</span>
+                        <td className="px-4 py-3 text-center">
+                          <span className={cn(
+                            "px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight",
+                            d.gestion === 'AUSENCIA' || d.gestion === 'ASESORIA' ? 'bg-amber-500/10 text-amber-600' :
+                              d.gestion === 'DIRECTO' ? 'bg-orange-500/10 text-orange-600' :
+                                'bg-emerald-500/10 text-emerald-600'
+                          )}>
+                            {d.gestion}
+                          </span>
                         </td>
-                        <td className="px-8 py-6">
-                          <p className="text-[11px] text-slate-500 italic line-clamp-2">"{d.observaciones || "SIN DATOS..."}"</p>
+                        <td className="px-4 py-3">
+                          <p className="text-[11px] font-medium line-clamp-1 max-w-[250px] text-[#608096]">
+                            {d.observaciones || "--"}
+                          </p>
                         </td>
-                        <td className="px-8 py-6">
+                        <td className="px-2 py-3 text-center">
                           <button
                             onClick={() => {
-                              const textoFormateado = d.campo === 'plantilla' || d.plantilla ? formatearPlantillaParaEditor(d.plantilla || "{}") : "{}";
-                              setModalConfig({ id: d.id, campo: 'plantilla', texto: textoFormateado, index: i });
+                              setActiveChatSoporteId(d.id);
+                              setActiveChatIncidente(d.incidente);
                             }}
-                            className={cn(
-                              "p-3 rounded-xl transition-all border",
-                              (d.gestion === "CIERRE" || d.gestion === "ENRUTAR") ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-slate-950" : "bg-slate-500/10 border-white/5 text-slate-500 hover:bg-slate-500/20"
-                            )}
-                            title="Plantilla Técnica"
+                            className="p-2 border rounded-xl transition-all relative flex items-center justify-center mx-auto hover:bg-[#00e5a0]/5 bg-[#060d14] border-[#152233] text-[#608096]"
                           >
-                            <ClipboardList size={16} />
-                          </button>
-                        </td>
-                        <td className="px-8 py-6">
-                          <select
-                            value={d.login_n1 === "POR_ASIGNAR" ? "" : (d.login_n1 || "")}
-                            onChange={(e) => handleLoginChange(d.id, e.target.value)}
-                            className="text-[10px] font-black border rounded-xl px-4 py-2 w-44 bg-slate-950 border-white/10 text-emerald-400 outline-none"
-                          >
-                            <option value="">Por asignar</option>
-                            {asesoresSoporte.map((a) => <option key={a.id} value={a.login}>{a.login}</option>)}
-                          </select>
-                        </td>
-                        <td className="px-8 py-6">
-                          <select
-                            value={d.estado || "En gestión"}
-                            onChange={(e) => handleEstadoChange(d.id, e.target.value)}
-                            className={cn(
-                              "text-[9px] font-black rounded-xl px-4 py-2 border w-40 outline-none transition-colors",
-                              coloresEstadoGestion[d.estado || "En gestión"] || "bg-slate-950 text-slate-400 border-white/10"
-                            )}
-                          >
-                            {estadosGestion.map((e) => (
-                              <option key={e} value={e} className="bg-[#0f172a] text-white">
-                                {e}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="px-8 py-6 text-center">
-                          <button
-                            onClick={() => setModalConfig({ id: d.id, campo: 'observaciones_ultima', texto: d.observaciones_ultima || "", index: i })}
-                            className={cn(
-                              "p-3 border rounded-xl transition-all group relative",
-                              (d.observaciones_ultima && d.observaciones_ultima !== "Registro inicial de gestión")
-                                ? "bg-amber-400 text-slate-950 border-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.5)] animate-bounce-subtle"
-                                : "bg-slate-500/10 border-white/5 text-slate-500 hover:bg-amber-500/20 hover:text-amber-500"
-                            )}
-                            title="Ver Novedad de Despacho"
-                          >
-                            <MessageSquareText size={16} className={cn((d.observaciones_ultima && d.observaciones_ultima !== "Registro inicial de gestión") ? "animate-pulse" : "")} />
-                            {(d.observaciones_ultima && d.observaciones_ultima !== "Registro inicial de gestión") && (
+                            <MessageSquare size={14} strokeWidth={2} />
+                            {d.chat_visto_soporte === false && (
                               <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 border border-white"></span>
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600 border-2 border-white"></span>
                               </span>
                             )}
                           </button>
+                        </td>
+                        <td className="px-2 py-3 text-center">
+                          <button
+                            onClick={() => {
+                              const textoFormateado = formatearPlantilla(d.plantilla || "{}");
+                              let evList = [];
+                              try { if(d.evidencias) evList = JSON.parse(d.evidencias); } catch(e){}
+                              setModalConfig({ id: d.id, text: textoFormateado, title: "PLANTILLA TÉCNICA", evidencias: evList });
+                            }}
+                            className="p-2 border rounded-xl transition-all flex items-center justify-center mx-auto hover:bg-[#00b8e5]/5 bg-[#060d14] border-[#152233] text-[#608096]"
+                          >
+                            <ClipboardList size={14} strokeWidth={2} />
+                          </button>
+                        </td>
+                        <td className="px-2 py-3 text-center">
+                          <div className="relative">
+                            <button
+                              onClick={() => setOpenDropdownId(openDropdownId?.id === d.id && openDropdownId.type === 'login' ? null : { id: d.id, type: 'login' })}
+                              className="w-32 border text-[9px] font-black uppercase py-2 px-3 rounded-xl flex items-center justify-between transition-all active:scale-95 bg-[#060d14] border-[#152233] text-white hover:border-[#00e5a0]/30"
+                            >
+                              <span className="truncate pr-2">{d.login_n1 === "POR_ASIGNAR" ? "--" : d.login_n1}</span>
+                              <ChevronDown size={10} className={cn("text-white/40 transition-transform", openDropdownId?.id === d.id && openDropdownId.type === 'login' && "rotate-180")} />
+                            </button>
+
+                            {openDropdownId?.id === d.id && openDropdownId.type === 'login' && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownId(null)} />
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-40 z-50 rounded-2xl border border-[#152233] bg-[#0b1621]/95 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-200">
+                                  <button
+                                    onClick={() => { actualizarSoporte(d.id, "login_n1", "POR_ASIGNAR"); setOpenDropdownId(null); }}
+                                    className="w-full px-5 py-3 text-[9px] font-bold text-left hover:bg-rose-500/10 hover:text-rose-500 transition-colors border-b border-white/5 text-white/50"
+                                  >
+                                    -- QUITAR ASIGNACIÓN --
+                                  </button>
+                                  <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                                    {asesoresSoporte.map(a => (
+                                      <button
+                                        key={a.id}
+                                        onClick={() => {
+                                          actualizarSoporte(d.id, "login_n1", a.login);
+                                          setOpenDropdownId(null);
+                                        }}
+                                        className="w-full px-5 py-3 text-[9px] font-black text-left hover:bg-[#00e5a0]/10 hover:text-[#00e5a0] transition-colors border-b border-white/5 last:border-0 text-white/80 uppercase"
+                                      >
+                                        {a.login}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-8 py-3 text-center">
+                          <div className="relative">
+                            <button
+                              onClick={() => setOpenDropdownId(openDropdownId?.id === d.id && openDropdownId.type === 'estado' ? null : { id: d.id, type: 'estado' })}
+                              className={cn(
+                                "w-28 border text-[9px] font-black rounded-xl py-1.5 px-3 flex items-center justify-between transition-all active:scale-95",
+                                d.estado === 'Resuelto' || d.estado === 'ACTIVO' ? 'bg-emerald-600/10 text-emerald-600 border-emerald-600/20 shadow-[0_0_15px_rgba(5,150,105,0.1)]' :
+                                  d.estado === 'En gestión' || d.estado === 'PENDIENTE' ? 'bg-[#00b8e5]/10 text-[#00b8e5] border-[#00b8e5]/20 shadow-[0_0_15px_rgba(0,184,229,0.1)]' :
+                                    d.estado === 'Enrutado' ? 'bg-amber-400/10 text-amber-400 border-amber-400/20 shadow-[0_0_15px_rgba(251,191,36,0.1)]' :
+                                      d.estado === 'Mal Escalado' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]' :
+                                        "bg-[#060d14] text-white border-[#152233]"
+                              )}
+                            >
+                              <span className="truncate pr-1 uppercase">{d.estado}</span>
+                              <ChevronDown size={10} className={cn("transition-transform", openDropdownId?.id === d.id && openDropdownId.type === 'estado' && "rotate-180")} />
+                            </button>
+
+                            {openDropdownId?.id === d.id && openDropdownId.type === 'estado' && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownId(null)} />
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-40 z-50 rounded-2xl border border-[#152233] bg-[#0b1621]/95 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-200">
+                                  {estadosGestion.map(e => (
+                                    <button
+                                      key={e}
+                                      onClick={() => {
+                                        actualizarSoporte(d.id, "estado", e);
+                                        setOpenDropdownId(null);
+                                      }}
+                                      className={cn(
+                                        "w-full px-5 py-3 text-[9px] font-black text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 uppercase italic",
+                                        e === 'Resuelto' ? 'text-emerald-500' :
+                                          e === 'En gestión' ? 'text-[#00b8e5]' :
+                                            e === 'Enrutado' ? 'text-amber-400' :
+                                              e === 'Mal Escalado' ? 'text-rose-500' : 'text-white/50'
+                                      )}
+                                    >
+                                      {e}
+                                    </button>
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className={cn(
+                            "text-[10px] font-black px-3 py-1.5 rounded-xl transition-all inline-flex items-center gap-2",
+                            d.estado === 'Resuelto' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' :
+                              d.estado === 'Enrutado' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' :
+                                d.estado === 'Mal Escalado' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' :
+                                  'bg-white/5 text-white border border-white/10'
+                          )}>
+                            {!d.fecha_fin && d.fecha_inicio_sitio && (
+                              <div className="w-1 h-1 rounded-full bg-current animate-pulse shadow-[0_0_8px_currentColor]" />
+                            )}
+                            {calcularTiempo(d.fecha_inicio_sitio, d.fecha_fin)}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -566,54 +540,82 @@ const SoportePage = () => {
             </div>
           </div>
         </main>
+      </div>
 
-        {modalConfig && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl p-8 animate-in fade-in">
-            <div className="bg-[#0f172a] border border-white/10 rounded-[3rem] shadow-2xl w-full max-w-3xl overflow-hidden p-10 space-y-8">
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3">
-                  {modalConfig.campo === 'plantilla' ? <ClipboardList className="text-emerald-500" size={24} /> : <AlertTriangle className="text-amber-500" size={24} />}
-                  <h2 className="text-2xl font-black text-white italic uppercase">
-                    {modalConfig.campo === 'plantilla' ? "Visualizar Plantilla" : "Novedad de Despacho"}
-                  </h2>
+      {/* VISOR MODAL */}
+      {modalConfig && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-xl animate-in fade-in p-8 bg-[#060d14]/80">
+          <div className="border rounded-[3rem] shadow-[0_0_80px_rgba(0,0,0,0.8)] w-full max-w-5xl overflow-hidden flex flex-col h-[90vh] hud-corners transition-all duration-500 bg-[#0b1621] border-[#152233]">
+            <div className="p-10 border-b flex justify-between items-center transition-colors duration-500 border-white/5 bg-[#060d14]/40">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 border rounded-2xl flex items-center justify-center transition-colors bg-[#00b8e5]/10 border-[#00b8e5]/30 text-[#00b8e5]">
+                  <ClipboardList size={24} />
                 </div>
-                <button onClick={() => setModalConfig(null)} className="p-3 bg-white/5 rounded-full"><X size={20} className="text-slate-400" /></button>
+                <h2 className="text-3xl font-black italic uppercase tracking-tighter drop-shadow-lg transition-colors text-white">{modalConfig.title}</h2>
+              </div>
+              <button onClick={() => setModalConfig(null)} className="p-4 rounded-2xl border transition-all bg-[#060d14] hover:bg-rose-500/10 text-white hover:text-rose-500 border-[#152233]">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="flex-1 p-10 overflow-hidden flex flex-col gap-6">
+              <p className="text-[10px] font-black text-[#00b8e5] uppercase tracking-[0.4em] opacity-80">CONTENIDO ESTRUCTURADO REGISTRADO</p>
+              <div className="flex-1 p-10 rounded-[2.5rem] border shadow-inner overflow-hidden flex flex-col transition-colors duration-500 bg-[#060d14] border-white/5">
+                <textarea
+                  className="w-full flex-1 bg-transparent text-base font-bold font-mono whitespace-pre-wrap leading-relaxed outline-none resize-none custom-scrollbar transition-colors text-white"
+                  value={modalConfig.text}
+                  onChange={(e) => setModalConfig({ ...modalConfig, text: e.target.value })}
+                />
               </div>
 
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
-                {modalConfig.campo === 'plantilla' ? "Contenido técnico (Solo lectura):" : "Instrucciones de despacho para soporte:"}
-              </p>
-
-              <textarea
-                className={cn(
-                  "w-full h-80 p-8 bg-slate-950/50 border border-white/10 rounded-[2rem] text-sm outline-none resize-none transition-all font-medium",
-                  modalConfig.campo === 'plantilla' ? "text-emerald-400 font-mono" : "text-slate-200 focus:border-amber-500/50"
-                )}
-                value={modalConfig.texto}
-                readOnly={modalConfig.campo === 'plantilla'}
-                onChange={(e) => setModalConfig({ ...modalConfig, texto: e.target.value })}
-                placeholder="Escriba aquí la novedad..."
-              />
-
-              <div className="flex gap-6">
-                <button onClick={() => setModalConfig(null)} className="flex-1 px-8 py-5 border border-white/10 text-[10px] font-black uppercase rounded-2xl text-slate-500">Descartar</button>
-                {modalConfig.campo === 'plantilla' ? (
-                  <button onClick={() => handleCopyTemplate(modalConfig.texto)} className="flex-[2] px-8 py-5 bg-emerald-500 text-slate-950 font-black rounded-2xl uppercase shadow-lg shadow-emerald-500/20 text-xs">Copiar Datos</button>
-                ) : (
-                  <div className="flex-[2] flex gap-4">
-                    <button onClick={notifyReading} className="flex-1 px-8 py-5 bg-emerald-600 text-white font-black rounded-2xl uppercase shadow-lg shadow-emerald-600/20 text-[9px] flex items-center justify-center gap-2">
-                      <Radio size={14} className="animate-pulse" /> Notificar Lectura
-                    </button>
-                    <button onClick={guardarDesdeModal} className="flex-1 px-8 py-5 bg-amber-500 text-slate-950 font-black rounded-2xl uppercase shadow-lg shadow-amber-500/20 text-[9px]">Guardar Cambios</button>
+              {modalConfig.evidencias && modalConfig.evidencias.length > 0 && (
+                <div className="space-y-4">
+                  <p className="text-[10px] font-black text-[#00e5a0] uppercase tracking-[0.4em] opacity-80 flex items-center gap-2">
+                    <ImageIcon size={14} /> EVIDENCIAS FOTOGRÁFICAS (TÉCNICO)
+                  </p>
+                  <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                    {modalConfig.evidencias.map((img, idx) => (
+                      <div key={idx} className="shrink-0 group relative overflow-hidden rounded-2xl border border-white/5 h-32 w-32 shadow-2xl">
+                        <img src={img} className="h-full w-full object-cover cursor-pointer hover:scale-110 transition-transform duration-500" onClick={() => window.open(img)} />
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(modalConfig.text);
+                  }}
+                  className="flex-1 py-5 border-2 text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl transition-all duration-300 bg-[#0b1621] border-[#00b8e5]/40 text-[#00b8e5] hover:bg-[#00b8e5] hover:text-[#061511] shadow-[0_0_20px_rgba(0,184,229,0.1)]"
+                >
+                  Copiar información
+                </button>
+                <button
+                  onClick={async () => {
+                    await actualizarSoporte(modalConfig.id, "plantilla", modalConfig.text);
+                    setModalConfig(null);
+                  }}
+                  className="flex-1 py-5 bg-gradient-to-r from-[#00e5a0] to-[#00b8e5] text-[#061511] text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.02] active:scale-95 transition-all duration-300 shadow-[0_0_30px_rgba(0,229,160,0.3)] hover:shadow-[0_0_40px_rgba(0,229,160,0.5)]"
+                >
+                  Guardar Cambios
+                </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* CHAT WINDOW */}
+      {activeChatSoporteId !== null && (
+        <ChatWindow
+          soporteId={activeChatSoporteId}
+          incidente={activeChatIncidente}
+          remitenteActual={"SOPORTE"}
+          nombreRemitente={loggedUser}
+          onClose={() => setActiveChatSoporteId(null)}
+        />
+      )}
     </div>
   );
-};
-
-export default SoportePage;
+}

@@ -8,7 +8,7 @@
  */
 
 export const plantillaCierreGPON = [
-  { label: "Fecha", type: "date" },
+  { label: "Fecha", type: "text" },
   { label: "Inc", type: "text" },
   { label: "Reparador", type: "text" },
   { label: "Equipo Sn/Mac", type: "text" },
@@ -29,7 +29,7 @@ export const plantillaCierreGPON = [
 ];
 
 export const plantillaCierreHFC = [
-  { label: "Fecha", type: "date" },
+  { label: "Fecha", type: "text" },
   { label: "Inc", type: "text" },
   { label: "Reparador", type: "text" },
   { label: "Equipo Sn/Mac", type: "text" },
@@ -41,7 +41,7 @@ export const plantillaCierreHFC = [
 export const plantillaCierreFIBRA = [...plantillaCierreHFC];
 
 export const plantillaEnrutarGPON = [
-  { label: "Fecha", type: "date" },
+  { label: "Fecha", type: "text" },
   { label: "Inc", type: "text" },
   { label: "Reparador", type: "text" },
   { label: "Equipo Sn/Mac", type: "text" },
@@ -60,7 +60,7 @@ export const plantillaEnrutarGPON = [
 ];
 
 export const plantillaEnrutarHFC = [
-  { label: "Fecha", type: "date" },
+  { label: "Fecha", type: "text" },
   { label: "Inc", type: "text" },
   { label: "Reparador", type: "text" },
   { label: "Equipo Sn/Mac", type: "text" },
@@ -82,7 +82,7 @@ export const plantillaEnrutarHFC = [
 ];
 
 export const plantillaEnrutarFIBRA = [
-  { label: "Fecha", type: "date" },
+  { label: "Fecha", type: "text" },
   { label: "Inc", type: "text" },
   { label: "Reparador", type: "text" },
   { label: "Equipo Sn/Mac", type: "text" },
@@ -90,5 +90,25 @@ export const plantillaEnrutarFIBRA = [
   { label: "Teléfono", type: "tel" },
   { label: "Cambio Módulo Óptico - Nodo (tipo de SFP instalado)", type: "text" },
   { label: "Cambio - Limpieza Módulo Óptico Switch (tipo de SFP instalado)", type: "text" },
+  { label: "Actividad realizada", type: "textarea" },
+];
+
+export const plantillaAsesoriaParametros = [
+  { label: "Fecha", type: "text" },
+  { label: "Inc", type: "text" },
+  { label: "Reparador", type: "text" },
+  { label: "Potencia Recibida", type: "text" },
+  { label: "SNR / Ruido", type: "text" },
+  { label: "Velocidad Sincronizada", type: "text" },
+  { label: "Actividad realizada", type: "textarea" },
+];
+
+export const plantillaAsesoriaInfraestructura = [
+  { label: "Fecha", type: "text" },
+  { label: "Inc", type: "text" },
+  { label: "Reparador", type: "text" },
+  { label: "Estado del Cableado", type: "text" },
+  { label: "Estado de Cajas/NAPs", type: "text" },
+  { label: "Tendido de Fibra", type: "text" },
   { label: "Actividad realizada", type: "textarea" },
 ];

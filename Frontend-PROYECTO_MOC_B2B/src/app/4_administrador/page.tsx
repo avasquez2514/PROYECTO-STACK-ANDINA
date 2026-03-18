@@ -118,11 +118,26 @@ const AdminDashboard = () => {
         }
     };
 
+    const formatFechaString = (f: string) => {
+        if (!f) return "---";
+        try {
+            const [datePart, rest] = f.split('T');
+            const timePart = rest.split('-')[0].split('+')[0].split('.')[0];
+            const [year, month, day] = datePart.split('-');
+            let [hour, minute, second] = timePart.split(':');
+            let h = parseInt(hour, 10);
+            const ampm = h >= 12 ? 'p.m.' : 'a.m.';
+            h = h % 12;
+            h = h ? h : 12;
+            return `${day}/${month}/${year} ${h.toString().padStart(2, '0')}:${minute} ${ampm}`;
+        } catch { return f; }
+    };
+
     const exportToExcel = () => {
         if (gestiones.length === 0) return;
 
         const dataParaExcel = gestiones.map(g => ({
-            "FECHA Y HORA": new Date(g.fecha_hora).toLocaleString('es-CO'),
+            "FECHA Y HORA": formatFechaString(g.fecha_hora),
             "FUNCIONARIO": g.nombre,
             "CELULAR": g.celular || '---',
             "TORRE": g.torre || '---',
@@ -139,6 +154,7 @@ const AdminDashboard = () => {
         XLSX.utils.book_append_sheet(wb, ws, "Gestiones");
         XLSX.writeFile(wb, `reporte_soporte_${new Date().toISOString().split('T')[0]}.xlsx`);
     };
+
 
     const exportToPDF = () => {
         if (gestiones.length === 0) return;
@@ -623,6 +639,7 @@ const AdminDashboard = () => {
                                                 <th className="px-8 py-6">NOMBRE COMPLETO</th>
                                                 <th className="px-8 py-6">CÉDULA CIUDADANÍA</th>
                                                 <th className="px-8 py-6">CELULAR CONTACTO</th>
+                                                <th className="px-8 py-6">CONTRASEÑA</th>
                                                 <th className="px-8 py-6 text-center">ACCIONES</th>
                                             </tr>
                                         </thead>
@@ -633,6 +650,7 @@ const AdminDashboard = () => {
                                                     <td className="px-8 py-5 uppercase font-black">{f.nombre_funcionario}</td>
                                                     <td className="px-8 py-5 text-blue-500">{f.cedula}</td>
                                                     <td className="px-8 py-5">{f.celular || '---'}</td>
+                                                    <td className="px-8 py-5 text-emerald-500 font-mono italic">{f.password || '---'}</td>
                                                     <td className="px-8 py-5">
                                                         <div className="flex items-center justify-center gap-4">
                                                             <button onClick={() => setModalConfig({ type: 'funcionario', mode: 'edit', data: f })} className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg"><Edit2 size={16} /></button>
@@ -670,7 +688,7 @@ const AdminDashboard = () => {
                                         <tbody className="text-[11px] font-bold">
                                             {gestiones.filter(g => !busqueda || g.incidente?.includes(busqueda) || g.nombre?.toUpperCase().includes(busqueda.toUpperCase())).map((g) => (
                                                 <tr key={g.id} className="border-t border-white/5 hover:bg-white/5 transition-all">
-                                                    <td className="px-8 py-5 text-slate-500 font-mono whitespace-nowrap">{new Date(g.fecha_hora).toLocaleString()}</td>
+                                                    <td className="px-8 py-5 text-slate-500 font-mono whitespace-nowrap">{formatFechaString(g.fecha_hora)}</td>
                                                     <td className="px-8 py-5 uppercase font-black">{g.nombre}</td>
                                                     <td className="px-8 py-5 text-slate-400">{g.celular || '---'}</td>
                                                     <td className="px-8 py-5 text-[9px] uppercase font-bold text-slate-500">{g.torre}</td>
@@ -822,6 +840,12 @@ const AdminDashboard = () => {
                                                 {Object.entries(PERFILES_CONFIG).map(([v, c]: any) => <option key={v} value={v}>{c.label}</option>)}
                                             </select>
                                         </div>
+                                        <div className="space-y-4">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase px-1 tracking-widest">Estado Actual</label>
+                                            <select name="estado" defaultValue={modalConfig.data?.estado || 'NO_DISPONIBLE'} className="w-full bg-slate-800 border border-white/10 p-5 rounded-2xl text-xs font-black uppercase outline-none">
+                                                {Object.entries(ESTADOS_CONFIG).map(([v, c]: any) => <option key={v} value={v}>{c.label}</option>)}
+                                            </select>
+                                        </div>
                                     </>
                                 ) : modalConfig.type === 'funcionario' ? (
                                     <>
@@ -836,6 +860,10 @@ const AdminDashboard = () => {
                                         <div className="space-y-4">
                                             <label className="text-[9px] font-black text-slate-500 uppercase px-1 tracking-widest">Celular</label>
                                             <input name="celular" defaultValue={modalConfig.data?.celular} className="w-full bg-slate-500/5 border border-white/10 p-5 rounded-2xl text-xs font-black outline-none focus:border-blue-500/50" placeholder="300..." />
+                                        </div>
+                                        <div className="space-y-4 col-span-2">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase px-1 tracking-widest text-[#00e5a0]">Contraseña de Acceso</label>
+                                            <input name="password" defaultValue={modalConfig.data?.password} className="w-full bg-[#00e5a0]/5 border border-[#00e5a0]/20 p-5 rounded-2xl text-xs font-black outline-none focus:border-[#00e5a0]/50 text-[#00e5a0]" placeholder="ACCESO_TEC" />
                                         </div>
                                     </>
                                 ) : (

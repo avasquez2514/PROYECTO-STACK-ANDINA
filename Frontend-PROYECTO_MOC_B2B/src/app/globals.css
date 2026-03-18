@@ -10,26 +10,77 @@
 
 @layer base {
   :root {
-    /* Tema Oscuro (Cyberpunk Deep Blue/Emerald) */
-    --background: #020617;
-    --foreground: #f8fafc;
-    --primary: #10b981;
-    --primary-glow: rgba(16, 185, 129, 0.25);
-    --secondary-glow: rgba(59, 130, 246, 0.15);
-    --card-bg: rgba(15, 23, 42, 0.7);
-    --border-color: rgba(255, 255, 255, 0.05);
+    /* Tema Phoenix Premium (Deep Obsidian / Neon Accents) */
+    --background: #060d14;
+    --foreground: #ffffff;
+    --primary: #00e5a0;
+    --primary-glow: rgba(0, 229, 160, 0.2);
+    --secondary: #00b8e5;
+    --secondary-glow: rgba(0, 184, 229, 0.15);
+    --accent-yellow: #e5b800;
+    --accent-red: #e5003d;
+    --card-bg: rgba(13, 25, 38, 0.6);
+    --border-color: rgba(0, 229, 160, 0.1);
+    --sidebar-bg: #04090e;
   }
 
   .light {
-    /* Tema Claro (Clean Glass/Emerald) */
+    /* Mantenemos una versión clara pero compatible */
     --background: #f8fafc;
-    --foreground: #020617;
-    --primary: #059669;
-    --primary-glow: rgba(5, 150, 105, 0.15);
-    --secondary-glow: rgba(37, 99, 235, 0.1);
+    --foreground: #060d14;
+    --primary: #00c985;
+    --primary-glow: rgba(0, 201, 133, 0.1);
+    --secondary: #0099c2;
+    --secondary-glow: rgba(0, 153, 194, 0.1);
+    --accent-yellow: #c29c00;
+    --accent-red: #c20034;
     --card-bg: rgba(255, 255, 255, 0.8);
     --border-color: rgba(0, 0, 0, 0.05);
+    --sidebar-bg: #ffffff;
   }
+}
+
+/**
+ * HUD CORNERS
+ * Adds 'L' shaped decorative corners to panels
+ */
+.hud-corners {
+  position: relative;
+}
+
+.hud-corners::before,
+.hud-corners::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: var(--primary);
+  opacity: 0.6;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+/* Top-left corner */
+.hud-corners::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+/* Bottom-right corner */
+.hud-corners::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
+
+.hud-corners:hover::before,
+.hud-corners:hover::after {
+  opacity: 1;
+  width: 15px;
+  height: 15px;
 }
 
 body {
