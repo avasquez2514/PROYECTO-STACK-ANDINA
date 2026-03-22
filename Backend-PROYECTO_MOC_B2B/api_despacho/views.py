@@ -1,8 +1,8 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Soporte, AsesorSoporte, Funcionario, ChatMessage
-from .serializers import SoporteSerializer, AsesorSoporteSerializer, FuncionarioSerializer, ChatMessageSerializer
+from .models import Soporte, AsesorSoporte, Funcionario, ChatMessage, Noticia
+from .serializers import SoporteSerializer, AsesorSoporteSerializer, FuncionarioSerializer, ChatMessageSerializer, NoticiaSerializer
 
 
 class SoporteViewSet(viewsets.ModelViewSet):
@@ -47,3 +47,7 @@ class ChatViewSet(viewsets.ModelViewSet):
         if soporte_id:
             queryset = queryset.filter(soporte_id=soporte_id)
         return queryset
+
+class NoticiaViewSet(viewsets.ModelViewSet):
+    queryset = Noticia.objects.all()
+    serializer_class = NoticiaSerializer

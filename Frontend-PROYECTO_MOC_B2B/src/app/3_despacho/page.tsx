@@ -3,10 +3,11 @@
 import React, { useEffect, useState } from "react";
 import {
   X, Search, ClipboardList,
-  ChevronDown, Zap, MessageSquare,
-  LayoutDashboard, CheckCircle2, AlertCircle, Clock
+  ChevronDown, Zap, MessageSquare, Copy,
+  LayoutDashboard, CheckCircle2, AlertCircle, Clock, Megaphone
 } from "lucide-react";
 import ChatWindow from "../components/ChatWindow";
+import LiveTimer from "../components/LiveTimer";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
@@ -27,25 +28,25 @@ export default function DespachoPage() {
   // Chat State
   const [activeChatSoporteId, setActiveChatSoporteId] = useState<number | null>(null);
   const [activeChatIncidente, setActiveChatIncidente] = useState<string>("");
+  const [noticia, setNoticia] = useState<any>(null);
 
+  const [openDropdownId, setOpenDropdownId] = useState<{ id: number; type: string } | null>(null);
   const [modalConfig, setModalConfig] = useState<{ id: number; text: string; title: string } | null>(null);
 
-  // Live Timer State
-  const [now, setNow] = useState(new Date());
+  // Live Timer State removed to optimize renders
 
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // Global timer effect removed to avoid full table re-renders
 
   useEffect(() => {
     setHasMounted(true);
     cargarDatos();
     cargarAsesores();
+    cargarNoticia();
     const interval = setInterval(() => {
       cargarDatos();
       cargarAsesores();
-    }, 3000);
+      cargarNoticia();
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -57,6 +58,17 @@ export default function DespachoPage() {
     } catch (e) { console.error(e); }
   };
 
+  const handleUpdateSoporte = async (id: number, field: string, value: any) => {
+    try {
+      await fetch(`http://127.0.0.1:8000/api/soporte/${id}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: value }),
+      });
+      cargarDatos();
+    } catch (e) { console.error(e); }
+  };
+
   const cargarAsesores = async () => {
     try {
       const res = await fetch("http://127.0.0.1:8000/api/asesores/");
@@ -65,21 +77,50 @@ export default function DespachoPage() {
     } catch (e) { console.error(e); }
   };
 
+  const cargarNoticia = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/noticias/");
+      const data = await res.json();
+      const activa = data.find((n: any) => n.activa);
+      setNoticia(activa || null);
+    } catch (e) { console.error(e); }
+  };
+
   const formatearFecha = (f: string) => {
     if (!f) return "---";
     try {
-      const [datePart, rest] = f.split('T');
-      const timePart = rest.split('-')[0].split('+')[0].split('.')[0];
-      const [year, month, day] = datePart.split('-');
-      let [hour, minute, second] = timePart.split(':');
-      let h = parseInt(hour, 10);
-      const ampm = h >= 12 ? 'p. m.' : 'a. m.';
-      h = h % 12;
-      h = h ? h : 12;
-      return `${day}/${month}/${year} | ${h.toString().padStart(2, '0')}:${minute}:${second} ${ampm}`;
+      const date = new Date(f);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+
+      let hours = date.getHours();
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const seconds = date.getSeconds().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'p. m.' : 'a. m.';
+      
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const strHours = hours.toString().padStart(2, '0');
+
+      return `${day}/${month}/${year} | ${strHours}:${minutes}:${seconds} ${ampm}`;
     } catch {
       return f;
     }
+  };
+
+  const decodificarObservaciones = (obs: string) => {
+    if (!obs) return "--";
+    try {
+      const parsed = JSON.parse(obs);
+      if (typeof parsed === 'object') {
+        return Object.entries(parsed)
+          .filter(([key, val]) => val && key !== 'incidente' && key !== 'tecnico')
+          .map(([_, val]) => `${val}`)
+          .join(" ");
+      }
+    } catch (e) {}
+    return obs;
   };
 
   const formatearPlantilla = (jsonString: string) => {
@@ -97,18 +138,7 @@ export default function DespachoPage() {
     }
   };
 
-  const calcularTiempo = (inicio: string | null, fin: string | null) => {
-    if (!inicio) return "00h 00m 00s";
-    const start = new Date(inicio).getTime();
-    const end = fin ? new Date(fin).getTime() : now.getTime();
-    const diff = Math.max(0, end - start);
-
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
-
-    return `${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`;
-  };
+  // calcularTiempo removed from here, now encapsulated in LiveTimer
 
   const datosFiltrados = datos.filter(d =>
     !busqueda || d.incidente?.toLowerCase().includes(busqueda.toLowerCase()) || d.nombre?.toLowerCase().includes(busqueda.toLowerCase())
@@ -239,7 +269,36 @@ export default function DespachoPage() {
 
           </header>
 
-          <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar relative">
+          <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar relative">
+            {/* Noticia Panel Section */}
+            {noticia && (
+              <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="relative group overflow-hidden rounded-[2rem] p-[1px] bg-gradient-to-r from-amber-500/50 via-amber-400/20 to-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.15)]">
+                  <div className="relative flex items-center gap-6 px-8 py-5 bg-[#0b1621] rounded-[1.95rem]">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-amber-500/20 blur-xl rounded-full" />
+                      <div className="relative w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center text-amber-500">
+                        <Megaphone size={22} className="animate-bounce" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/80">AVISO IMPORTANTE DEL ADMINISTRADOR</span>
+                        <div className="h-[1px] flex-1 bg-gradient-to-r from-amber-500/30 to-transparent" />
+                      </div>
+                      <p className="text-sm font-black text-white/90 leading-relaxed uppercase italic">
+                        {noticia.contenido}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end opacity-40">
+                      <p className="text-[8px] font-black uppercase tracking-widest text-[#608096]">Publicado hoy</p>
+                      <p className="text-[10px] font-mono text-white/60">{new Date(noticia.fecha_publicacion).toLocaleTimeString()}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Stats Cards Section */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
               {[
@@ -280,7 +339,7 @@ export default function DespachoPage() {
                 <table className="w-full text-left min-w-[1400px] border-collapse">
                   <thead>
                     <tr className="text-[9px] font-bold uppercase tracking-[0.1em] sticky top-0 z-20 text-[#608096] bg-[#060d14] border-b border-[#152233]">
-                      <th className="px-4 py-3">MARCA TEMPORAL</th>
+                      <th className="px-4 py-3">FECHA</th>
                       <th className="px-2 py-3 text-center">EN SITIO</th>
                       <th className="px-4 py-3">TÉCNICO</th>
                       <th className="px-4 py-3">CELULAR</th>
@@ -288,11 +347,11 @@ export default function DespachoPage() {
                       <th className="px-4 py-3">NÚMERO INC</th>
                       <th className="px-4 py-3 text-center">GESTIÓN</th>
                       <th className="px-4 py-3 min-w-[250px]">OBS. TÉCNICAS</th>
-                      <th className="px-2 py-3 text-center">CHAT</th>
                       <th className="px-2 py-3 text-center">PLANTILLA</th>
                       <th className="px-2 py-3 text-center">LOGIN N1</th>
                       <th className="px-2 py-3 text-center">ESTADO</th>
-                      <th className="px-4 py-3 text-right">TIEMPO</th>
+                      <th className="px-4 py-3 text-center">TIEMPO</th>
+                      <th className="px-4 py-3 text-center">PRIORIDAD</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#152233]/40">
@@ -322,9 +381,26 @@ export default function DespachoPage() {
                           <span className="text-[11px] font-bold uppercase tracking-tighter truncate max-w-[150px] inline-block text-white">{d.torre}</span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="px-2.5 py-1 bg-[#0b1621] text-white rounded-lg font-mono font-black text-[10px] border border-white/20">
-                            {d.incidente || "INC-0000"}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-1 bg-[#0b1621] text-white rounded-lg font-mono font-black text-[10px] border border-white/20">
+                              {d.incidente || "INC-0000"}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                navigator.clipboard.writeText(d.incidente || "INC-0000");
+                                const btn = e.currentTarget;
+                                const originalHtml = btn.innerHTML;
+                                btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00e5a0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                                setTimeout(() => {
+                                  btn.innerHTML = originalHtml;
+                                }, 1500);
+                              }}
+                              className="p-1.5 hover:bg-[#00e5a0]/20 hover:text-[#00e5a0] text-[#608096] rounded-md transition-all border border-transparent hover:border-[#00e5a0]/30 shadow-sm"
+                              title="Copiar Incidente"
+                            >
+                              <Copy size={12} strokeWidth={2.5} />
+                            </button>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className={cn(
@@ -337,26 +413,9 @@ export default function DespachoPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <p className="text-[11px] font-medium italic line-clamp-1 max-w-[250px] text-[#608096]">
-                            {d.observaciones || "--"}
+                          <p className="text-[11px] font-medium italic line-clamp-2 max-w-[250px] text-slate-400 group-hover:text-white transition-colors" title={decodificarObservaciones(d.observaciones)}>
+                            {decodificarObservaciones(d.observaciones)}
                           </p>
-                        </td>
-                        <td className="px-2 py-3 text-center">
-                          <button
-                            onClick={() => {
-                              setActiveChatSoporteId(d.id);
-                              setActiveChatIncidente(d.incidente);
-                            }}
-                            className="p-2 border rounded-xl transition-all relative flex items-center justify-center mx-auto hover:bg-[#00e5a0]/5 bg-[#060d14] border-[#152233] text-[#608096]"
-                          >
-                            <MessageSquare size={14} strokeWidth={2} />
-                            {d.chat_visto_soporte === false && (
-                              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600 border-2 border-white"></span>
-                              </span>
-                            )}
-                          </button>
                         </td>
                         <td className="px-2 py-3 text-center">
                           <button
@@ -380,7 +439,7 @@ export default function DespachoPage() {
                         <td className="px-8 py-3 text-center">
                           <div
                             className={cn(
-                              "w-28 border text-[9px] font-black rounded-xl py-1.5 px-3 flex items-center justify-between mx-auto opacity-80",
+                              "w-28 border text-[9px] font-black rounded-xl py-1.5 px-3 flex items-center justify-center mx-auto opacity-80 transition-all",
                               d.estado === 'Resuelto' || d.estado === 'ACTIVO' ? 'bg-emerald-600/10 text-emerald-600 border-emerald-600/20' :
                                 d.estado === 'En gestión' || d.estado === 'PENDIENTE' ? 'bg-[#00b8e5]/10 text-[#00b8e5] border-[#00b8e5]/20' :
                                   d.estado === 'Enrutado' ? 'bg-amber-400/10 text-amber-400 border-amber-400/20' :
@@ -388,23 +447,35 @@ export default function DespachoPage() {
                                       "bg-[#060d14] text-white border-[#152233]"
                             )}
                           >
-                            <span className="truncate pr-1 uppercase">{d.estado || "---"}</span>
-                            <ChevronDown size={10} className="opacity-40" />
+                            <span className="truncate uppercase">{d.estado || "---"}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-center">
                           <span className={cn(
-                            "text-[10px] font-black px-3 py-1.5 rounded-xl transition-all inline-flex items-center gap-2",
-                            d.estado === 'Resuelto' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 animate-pulse-slow' :
-                              d.estado === 'Enrutado' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' :
-                                d.estado === 'Mal Escalado' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' :
-                                  'bg-white/5 text-white border border-white/10'
+                            "text-[10px] font-black px-3 py-1.5 rounded-xl transition-all inline-flex items-center justify-center gap-2",
+                            d.estado === 'Resuelto' ? 'text-emerald-500 animate-pulse-slow' :
+                              d.estado === 'Enrutado' ? 'text-amber-400' :
+                                d.estado === 'Mal Escalado' ? 'text-rose-500' :
+                                  'text-white'
                           )}>
                             {!d.fecha_fin && d.fecha_inicio_sitio && (
-                              <div className="w-1 h-1 rounded-full bg-current animate-pulse shadow-[0_0_8px_currentColor]" />
+                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
                             )}
-                            {calcularTiempo(d.fecha_inicio_sitio, d.fecha_fin)}
+                            <LiveTimer inicio={d.fecha_inicio_sitio} fin={d.fecha_fin} />
                           </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => handleUpdateSoporte(d.id, "prioridad", !d.prioridad)}
+                            className={cn(
+                              "px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border",
+                              d.prioridad 
+                                ? "bg-rose-500 text-white border-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.4)] animate-pulse" 
+                                : "bg-[#060d14] text-[#608096] border-[#152233] hover:border-rose-500/50 hover:text-rose-400"
+                            )}
+                          >
+                            {d.prioridad ? "PRIORIDAD ALTA" : "NORMAL"}
+                          </button>
                         </td>
                       </tr>
                     ))}

@@ -15,6 +15,7 @@ import {
 import PlantillaRender from "../components/PlantillaRender";
 import ChatWindow from "../components/ChatWindow";
 import HistorialTable from "../components/HistorialTable";
+import AuthTerminal from "../components/AuthTerminal";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
@@ -29,15 +30,7 @@ export default function TecnicosPage() {
     const [loggedUser, setLoggedUser] = useState("TÉCNICO DE CAMPO");
     const [loggedUserId, setLoggedUserId] = useState<number | null>(null);
 
-    // Auth State
-    const [authMode, setAuthMode] = useState<"LOGIN" | "REGISTER">("LOGIN");
-    const [authForm, setAuthForm] = useState({
-        cedula: "",
-        password: "",
-        nombre: "",
-        celular: ""
-    });
-    const [authLoading, setAuthLoading] = useState(false);
+    // Auth State now moved to AuthTerminal component
 
     // Form State
     const [area, setArea] = useState(TABS[0]);
@@ -73,7 +66,7 @@ export default function TecnicosPage() {
     const [activeChatIncidente, setActiveChatIncidente] = useState<string>("");
 
     // Evidencias (Only for ENRUTAR)
-    const [evidencias, setEvidencias] = useState<string[]>([]);
+    const [evidencias, setEvidencias] = useState<{ file: File; previewUrl: string }[]>([]);
 
     // Change Password State
     const [showPassModal, setShowPassModal] = useState(false);
@@ -171,85 +164,11 @@ export default function TecnicosPage() {
         }
     };
 
-    const handleAuthSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setAuthLoading(true);
-
-        if (authMode === "REGISTER") {
-            // Registro de Técnico
-            if (!authForm.cedula || !authForm.nombre || !authForm.password) {
-                showNotify("Por favor, complete los campos obligatorios.", "error");
-                setAuthLoading(false);
-                return;
-            }
-
-            try {
-                const res = await fetch("http://127.0.0.1:8000/api/funcionarios/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        cedula: authForm.cedula,
-                        password: authForm.password,
-                        nombre_funcionario: authForm.nombre.toUpperCase(),
-                        celular: authForm.celular
-                    })
-                });
-
-                if (res.ok) {
-                    showNotify("REGISTRO EXITOSO. AHORA PUEDES INGRESAR.", "success");
-                    setAuthMode("LOGIN");
-                    setAuthForm({ ...authForm, password: "" }); // Limpiar password tras registro
-                } else {
-                    const errorData = await res.json();
-                    let msg = "ERROR AL REGISTRAR";
-                    if (errorData.nombre_funcionario) msg = "EL NOMBRE YA ESTÁ REGISTRADO";
-                    if (errorData.cedula) msg = "LA CÉDULA YA ESTÁ REGISTRADA";
-                    showNotify(msg, "error");
-                }
-            } catch (error) {
-                showNotify("ERROR DE CONEXIÓN AL BACKEND.", "error");
-            }
-        } else {
-            // Login de Técnico
-            if (!authForm.cedula || !authForm.password) {
-                showNotify("Por favor ingrese cédula y contraseña.", "error");
-                setAuthLoading(false);
-                return;
-            }
-
-            try {
-                const res = await fetch("http://127.0.0.1:8000/api/funcionarios/login/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        cedula: authForm.cedula,
-                        password: authForm.password
-                    })
-                });
-
-                if (res.ok) {
-                    const user = await res.json();
-                    localStorage.setItem("phoenix_tech_user", JSON.stringify(user));
-                    setLoggedUser(user.nombre_funcionario || "TÉCNICO DE CAMPO");
-                    setLoggedUserId(user.id);
-                    setIsAuthenticated(true);
-                    showNotify(`BIENVENIDO(A) ${user.nombre_funcionario.split(' ')[0]}`, "success");
-                } else {
-                    const errorData = await res.json();
-                    showNotify(errorData.error || "ERROR EN LAS CREDENCIALES", "error");
-                }
-            } catch (error) {
-                showNotify("ERROR DE CONEXIÓN AL BACKEND.", "error");
-            }
-        }
-
-        setAuthLoading(false);
-    };
+    // handleAuthSubmit moved to AuthTerminal
 
     const handleLogout = () => {
         localStorage.removeItem("phoenix_tech_user");
         setIsAuthenticated(false);
-        setAuthForm({ ...authForm, password: "" }); // limpiar
         setHistorial([]);
     };
 
@@ -282,27 +201,42 @@ export default function TecnicosPage() {
             finalObservaciones = `[${subGestionAsesoria}] ${extraText}${extraText ? ' -- ' : ''}${finalObservaciones}`;
         }
 
-        const payload = {
-            fecha_hora: new Date().toISOString(),
-            en_sitio: enSitio === "SÍ",
-            nombre: loggedUser,
-            torre: torre,
-            incidente: incidente,
-            gestion: gestion,
-            observaciones: finalObservaciones,
-            plantilla: gestion === "ASESORIA" ? "{}" : JSON.stringify(formExtra),
-            tipo_servicio: tecnologia,
-            estado: "En gestión",
-            login_n1: "POR_ASIGNAR",
-            observaciones_ultima: "Registro inicial de gestión",
-            evidencias: gestion === "ENRUTAR" ? JSON.stringify(evidencias) : null
-        };
+        const formData = new FormData();
+        // Capturamos el tiempo local exacto del PC del técnico como un string plano (sin Z ni UTC)
+        // Esto le dice al servidor "graba exactamente esta hora" sin conversiones.
+        const now = new Date();
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const localISO = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        
+        formData.append("fecha_hora", localISO);
+        formData.append("en_sitio", enSitio === "SÍ" ? "true" : "false");
+        formData.append("nombre", loggedUser);
+        formData.append("torre", torre);
+        formData.append("incidente", incidente);
+        formData.append("gestion", gestion);
+        formData.append("observaciones", finalObservaciones);
+        formData.append("plantilla", gestion === "ASESORIA" ? "{}" : JSON.stringify(formExtra));
+        formData.append("tipo_servicio", tecnologia);
+        formData.append("estado", "En gestión");
+        formData.append("login_n1", "POR_ASIGNAR");
+        formData.append("observaciones_ultima", "Registro inicial de gestión");
+        
+        // Seteamos las alertas de chat en TRUE (vistas) para que no aparezca el punto naranja
+        // al crear la tarea. Solo aparecerá cuando realmente se envíe un mensaje.
+        formData.append("chat_visto_soporte", "true");
+        formData.append("chat_visto_tecnico", "true");
+        formData.append("chat_visto_despacho", "true");
+        
+        if (gestion === "ENRUTAR" && evidencias.length > 0) {
+            evidencias.forEach((ev, i) => {
+                formData.append(`evidencia_${i}`, ev.file); // Append valid File object
+            });
+        }
 
         try {
             const res = await fetch("http://127.0.0.1:8000/api/soporte/", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
+                body: formData,
             });
 
             if (res.ok) {
@@ -327,127 +261,15 @@ export default function TecnicosPage() {
     // 1. VISTA DE AUTENTICACIÓN
     if (!isAuthenticated) {
         return (
-            <div className="min-h-screen bg-[#060d14] font-sans flex items-center justify-center p-6 relative overflow-hidden">
-                <div className="fixed inset-0 pointer-events-none z-0">
-                    <div
-                        className="absolute inset-0 opacity-40 transition-opacity duration-1000"
-                        style={{
-                            background: `
-                            radial-gradient(ellipse 55% 65% at 10% 55%, #0a2a44 0%, transparent 65%),
-                            radial-gradient(ellipse 45% 50% at 88% 18%, #082a1e 0%, transparent 60%),
-                            radial-gradient(ellipse 40% 40% at 70% 85%, #051820 0%, transparent 60%),
-                            #060d14
-                        `
-                        }}
-                    />
-                </div>
-
-                <div className="relative z-10 w-full max-w-sm">
-                    <div className="bg-[#0b1621] border border-[#152233] p-10 rounded-[40px] shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col items-center">
-                        <div className="w-20 h-20 border-2 rounded-full flex items-center justify-center mb-8 shadow-[0_0_30px_rgba(0,229,160,0.2)] bg-[#060d14] border-[#00e5a0] text-[#00e5a0]">
-                            <Zap size={36} fill="currentColor" className="opacity-90" />
-                        </div>
-
-                        <div className="text-center mb-10 space-y-2">
-                            <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-tight">BIENVENIDO A<br /><span className="text-[#00e5a0] text-4xl font-[900]">SIMOC</span></h2>
-                            <p className="text-[10px] text-[#608096] font-bold uppercase tracking-[0.4em] opacity-80">TERMINAL DE GESTIÓN</p>
-                        </div>
-
-                        <form onSubmit={handleAuthSubmit} className="w-full space-y-6">
-                            {authMode === "REGISTER" && (
-                                <>
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-[#608096] uppercase tracking-widest pl-1">NOMBRE COMPLETO</label>
-                                        <div className="relative">
-                                            <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#608096]" />
-                                            <input
-                                                type="text"
-                                                required
-                                                value={authForm.nombre}
-                                                onChange={(e) => setAuthForm({ ...authForm, nombre: e.target.value })}
-                                                className="w-full bg-white text-[#060d14] text-xs font-bold px-12 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-[#00e5a0]/20 transition-all placeholder:text-slate-400"
-                                                placeholder="Nombres y apellidos"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-[#608096] uppercase tracking-widest pl-1">CELULAR (OPCIONAL)</label>
-                                        <div className="relative">
-                                            <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#608096]" />
-                                            <input
-                                                type="text"
-                                                value={authForm.celular}
-                                                onChange={(e) => setAuthForm({ ...authForm, celular: e.target.value })}
-                                                className="w-full bg-white text-[#060d14] text-xs font-bold px-12 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-[#00e5a0]/20 transition-all placeholder:text-slate-400"
-                                                placeholder="Ej. 300 000 0000"
-                                            />
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-
-                            <div className="space-y-2">
-                                <label className="text-[9px] font-black text-[#608096] uppercase tracking-widest pl-1">CÉDULA DE IDENTIDAD</label>
-                                <div className="relative">
-                                    <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#608096]" />
-                                    <input
-                                        type="text"
-                                        required
-                                        value={authForm.cedula}
-                                        onChange={(e) => setAuthForm({ ...authForm, cedula: e.target.value })}
-                                        className="w-full bg-white text-[#060d14] text-sm font-bold px-12 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-[#00e5a0]/20 transition-all placeholder:text-slate-400 shadow-inner"
-                                        placeholder="452547"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[9px] font-black text-[#608096] uppercase tracking-widest pl-1">CONTRASEÑA DE ACCESO</label>
-                                <div className="relative">
-                                    <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#608096]" />
-                                    <input
-                                        type="password"
-                                        required
-                                        value={authForm.password}
-                                        onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
-                                        className="w-full bg-white text-[#060d14] text-sm font-black px-12 py-4 rounded-2xl outline-none focus:ring-4 focus:ring-[#00e5a0]/20 transition-all placeholder:text-slate-400 shadow-inner"
-                                        placeholder="••••••"
-                                    />
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={authLoading}
-                                className="w-full flex items-center justify-center gap-4 bg-[#061511] hover:bg-[#0a231a] border-2 border-[#00e5a0]/80 text-white text-[11px] font-[900] uppercase tracking-[0.2em] py-5 rounded-2xl mt-10 transition-all shadow-[0_0_30px_rgba(0,229,160,0.1)] hover:shadow-[0_0_40px_rgba(0,229,160,0.3)] disabled:opacity-50 relative group overflow-hidden"
-                            >
-                                <span className="relative z-10">{authLoading ? "PROCESANDO..." : (authMode === "LOGIN" ? "INGRESAR A TERMINAL" : "REGISTRAR TÉCNICO")}</span>
-                                <div className="bg-[#00e5a0] p-1.5 rounded-lg text-[#061511]">
-                                    <Monitor size={16} strokeWidth={3} />
-                                </div>
-                            </button>
-                        </form>
-
-                        <div className="mt-8 text-[9px] font-bold text-[#608096] tracking-widest uppercase">
-                            {authMode === "LOGIN" ? (
-                                <>
-                                    ¿No tienes cuenta? <button type="button" onClick={() => setAuthMode("REGISTER")} className="text-[#00e5a0] hover:underline ml-1">Regístrate aquí</button>
-                                </>
-                            ) : (
-                                <>
-                                    ¿Ya tienes cuenta? <button type="button" onClick={() => setAuthMode("LOGIN")} className="text-[#00e5a0] hover:underline ml-1">Ingresa aquí</button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="mt-12 text-center">
-                        <p className="text-[7px] font-black text-[#3a5c72] uppercase tracking-[0.3em]">
-                            © 2026 ADVANCED SECURITY - SIMOC
-                        </p>
-                    </div>
-                </div>
-            </div>
+            <AuthTerminal 
+                showNotify={showNotify}
+                onLoginSuccess={(user) => {
+                    setLoggedUser(user.nombre_funcionario || "TÉCNICO DE CAMPO");
+                    setLoggedUserId(user.id);
+                    setIsAuthenticated(true);
+                    showNotify(`BIENVENIDO(A) ${user.nombre_funcionario.split(' ')[0]}`, "success");
+                }} 
+            />
         );
     }
 
@@ -508,26 +330,26 @@ export default function TecnicosPage() {
             <main className="relative z-10 max-w-5xl mx-auto p-4 md:p-8 space-y-8">
 
                 {/* Formulario Inteligente */}
-                <section className="border border-[#152233] bg-[#0b1621]/60 backdrop-blur-md rounded-2xl p-8 shadow-2xl hud-corners relative">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10 border-b border-[#152233] pb-6">
+                <section className="border border-[#152233] bg-[#0b1621]/60 backdrop-blur-md rounded-2xl p-4 sm:p-8 shadow-2xl hud-corners relative">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 border-b border-[#152233] pb-6">
                         <div>
                             <div className="flex items-center gap-3 mb-2">
-                                <div className="h-px w-8 bg-[#00e5a0]" />
-                                <span className="text-[9px] text-[#00e5a0] font-black uppercase tracking-[0.4em] drop-shadow-[0_0_8px_rgba(0,229,160,0.5)]">MANAGEMENT TERMINAL</span>
+                                <div className="h-px w-6 sm:w-8 bg-[#00e5a0]" />
+                                <span className="text-[8px] sm:text-[9px] text-[#00e5a0] font-black uppercase tracking-[0.4em] drop-shadow-[0_0_8px_rgba(0,229,160,0.5)]">MANAGEMENT TERMINAL</span>
                             </div>
-                            <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-white drop-shadow-md">
+                            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-white drop-shadow-md">
                                 REGISTRO DE<br />
                                 <span className="text-[#00e5a0]">GESTIÓN</span>
                             </h1>
                         </div>
 
-                        <div className="flex bg-[#060d14] border border-[#152233] rounded-xl p-1 shadow-inner">
+                        <div className="flex w-full sm:w-auto bg-[#060d14] border border-[#152233] rounded-xl p-1 shadow-inner overflow-x-auto">
                             {TABS.map(t => (
                                 <button
                                     key={t}
                                     onClick={() => setArea(t)}
                                     className={cn(
-                                        "px-6 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                                        "flex-1 px-4 sm:px-6 py-2.5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-lg transition-all whitespace-nowrap",
                                         area === t ? "bg-[#00e5a0] text-[#060d14] shadow-[0_0_15px_rgba(0,229,160,0.4)]" : "text-[#608096] hover:text-white"
                                     )}
                                 >
@@ -537,16 +359,16 @@ export default function TecnicosPage() {
                         </div>
                     </div>
 
-                    <form onSubmit={enviarGestion} className="space-y-10">
+                    <form onSubmit={enviarGestion} className="space-y-8 sm:space-y-10">
                         {/* Gestiones Selectors */}
-                        <div className="flex flex-col sm:flex-row border border-[#152233] bg-[#060d14] rounded-xl p-1 gap-1">
+                        <div className="flex overflow-x-auto border border-[#152233] bg-[#060d14] rounded-xl p-1 gap-1 custom-scrollbar">
                             {GESTIONES.map(g => (
                                 <button
                                     key={g}
                                     type="button"
                                     onClick={() => setGestion(g)}
                                     className={cn(
-                                        "flex-1 py-4 px-2 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg transition-all text-center",
+                                        "min-w-[80px] flex-1 py-3 sm:py-4 px-2 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] rounded-lg transition-all text-center whitespace-nowrap",
                                         gestion === g ? "bg-[#0b1621] border border-[#00e5a0]/30 text-[#00e5a0] shadow-[inset_0_0_20px_rgba(0,229,160,0.1)]" : "text-[#608096] hover:text-white"
                                     )}
                                 >
@@ -555,7 +377,7 @@ export default function TecnicosPage() {
                             ))}
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12">
                             {/* Column 1 */}
                             <div className="space-y-8">
                                 <div className="flex items-center gap-3 text-[#00e5a0]">
@@ -687,14 +509,17 @@ export default function TecnicosPage() {
                                             <span className="text-[8px] text-[#608096] font-bold uppercase">{evidencias.length} / 5</span>
                                         </div>
                                         
-                                        <div className="grid grid-cols-5 gap-3">
-                                            {evidencias.map((img, i) => (
+                                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                                            {evidencias.map((ev, i) => (
                                                 <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-[#00e5a0]/30 group">
-                                                    <img src={img} className="w-full h-full object-cover" />
+                                                    <img src={ev.previewUrl} className="w-full h-full object-cover" />
                                                     <button 
                                                         type="button"
-                                                        onClick={() => setEvidencias(evidencias.filter((_, idx) => idx !== i))}
-                                                        className="absolute inset-0 bg-rose-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        onClick={() => {
+                                                            URL.revokeObjectURL(ev.previewUrl);
+                                                            setEvidencias(evidencias.filter((_, idx) => idx !== i));
+                                                        }}
+                                                        className="absolute inset-0 bg-rose-500/80 flex items-center justify-center transition-opacity"
                                                     >
                                                         <Trash2 size={16} className="text-white" />
                                                     </button>
@@ -710,11 +535,8 @@ export default function TecnicosPage() {
                                                         onChange={(e) => {
                                                             const file = e.target.files?.[0];
                                                             if (file) {
-                                                                const reader = new FileReader();
-                                                                reader.onloadend = () => {
-                                                                    setEvidencias([...evidencias, reader.result as string]);
-                                                                };
-                                                                reader.readAsDataURL(file);
+                                                                const previewUrl = URL.createObjectURL(file);
+                                                                setEvidencias([...evidencias, { file, previewUrl }]);
                                                             }
                                                         }}
                                                     />
@@ -727,7 +549,7 @@ export default function TecnicosPage() {
                         </div>
 
                         {/* Intelligent Dynamic Area */}
-                        <div className="border border-dashed border-[#152233] rounded-xl flex items-center justify-center p-8 bg-[#060d14]/50 my-8">
+                        <div className="border border-dashed border-[#152233] rounded-xl flex items-center justify-center p-4 sm:p-8 bg-[#060d14]/50 my-6 sm:my-8 text-center sm:text-left">
                             {!tecnologia ? (
                                 <p className="text-[9px] font-black text-[#608096] tracking-[0.2em] uppercase text-center">
                                     • SELECCIONE TECNOLOGÍA DE RED PARA ACTIVAR PLANTILLA DE {gestion} •

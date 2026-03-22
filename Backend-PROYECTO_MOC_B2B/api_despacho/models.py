@@ -27,6 +27,7 @@ class Soporte(models.Model):
     estado = models.CharField(max_length=255)
     observaciones_ultima = models.TextField()
     evidencias = models.TextField(null=True, blank=True) # JSON list of base64 strings
+    prioridad = models.BooleanField(default=False)
 
     # Campos para el cronómetro
     fecha_inicio_sitio = models.DateTimeField(null=True, blank=True)
@@ -176,4 +177,18 @@ class ChatMessage(models.Model):
         ordering = ['fecha_hora']
 
     def __str__(self):
-        return f"{self.remitente}: {self.mensaje[:20]}"
+        return f"{self.remitente}: {self.mensaje[:20]}"
+
+
+class Noticia(models.Model):
+    id = models.AutoField(primary_key=True)
+    contenido = models.TextField()
+    fecha_publicacion = models.DateTimeField(auto_now_add=True)
+    activa = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "noticias"
+        ordering = ['-fecha_publicacion']
+
+    def __str__(self):
+        return self.contenido[:50]

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Soporte, AsesorSoporte, Funcionario, HistorialEstadoAsesor, ChatMessage
+from .models import Soporte, AsesorSoporte, Funcionario, HistorialEstadoAsesor, ChatMessage, Noticia
 
 
 class SoporteSerializer(serializers.ModelSerializer):
@@ -40,4 +40,9 @@ class FuncionarioSerializer(serializers.ModelSerializer):
 class ChatMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChatMessage
-        fields = '__all__'
+        fields = '__all__'
+
+class NoticiaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Noticia
+        fields = '__all__'

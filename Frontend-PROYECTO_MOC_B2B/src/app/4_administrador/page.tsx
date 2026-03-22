@@ -7,7 +7,7 @@ import {
     Activity, ArrowUpRight, Filter, Database,
     FileSpreadsheet, ClipboardCheck, AlertTriangle,
     Plus, Edit2, Trash2, X, Check, ChevronRight, UserPlus, HardDrive, UserCheck,
-    FileText, FileJson, History
+    FileText, FileJson, History, Megaphone, BellRing
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -33,6 +33,7 @@ const AdminDashboard = () => {
     const [asesores, setAsesores] = useState<any[]>([]);
     const [gestiones, setGestiones] = useState<any[]>([]);
     const [funcionarios, setFuncionarios] = useState<any[]>([]);
+    const [noticias, setNoticias] = useState<any[]>([]);
     const [hasMounted, setHasMounted] = useState(false);
     const [theme, setTheme] = useState("dark");
     const [busqueda, setBusqueda] = useState("");
@@ -43,7 +44,7 @@ const AdminDashboard = () => {
 
     // Modal States
     const [modalConfig, setModalConfig] = useState<{
-        type: 'asesor' | 'funcionario' | 'soporte' | 'asesor_history',
+        type: 'asesor' | 'funcionario' | 'soporte' | 'asesor_history' | 'noticia',
         mode: 'add' | 'edit',
         data?: any
     } | null>(null);
@@ -66,18 +67,20 @@ const AdminDashboard = () => {
 
     const fetchData = async () => {
         try {
-            const [resAsesores, resGestiones, resFuncs] = await Promise.all([
+            const [resAsesores, resGestiones, resFuncs, resNoticias] = await Promise.all([
                 fetch("http://127.0.0.1:8000/api/asesores/"),
                 fetch("http://127.0.0.1:8000/api/soporte/"),
-                fetch("http://127.0.0.1:8000/api/funcionarios/")
+                fetch("http://127.0.0.1:8000/api/funcionarios/"),
+                fetch("http://127.0.0.1:8000/api/noticias/")
             ]);
-            const [dataA, dataG, dataF] = await Promise.all([
-                resAsesores.json(), resGestiones.json(), resFuncs.json()
+            const [dataA, dataG, dataF, dataN] = await Promise.all([
+                resAsesores.json(), resGestiones.json(), resFuncs.json(), resNoticias.json()
             ]);
 
             setAsesores(dataA);
             setGestiones(dataG.sort((a: any, b: any) => b.id - a.id));
             setFuncionarios(dataF);
+            setNoticias(dataN.sort((a: any, b: any) => b.id - a.id));
             setLoading(false);
         } catch (error) {
             console.error("Error fetching admin data:", error);
@@ -351,6 +354,7 @@ const AdminDashboard = () => {
                             { id: "asesores", label: "Gestión de Asesores", icon: Users },
                             { id: "funcionarios", label: "Base de Funcionarios", icon: UserCheck },
                             { id: "historico_asesores", label: "Histórico de Asesores", icon: History },
+                            { id: "noticias", label: "Panel de Noticias", icon: Megaphone },
                             { id: "soportes", label: "Histórico de Incidentes", icon: Database }
                         ].map((tab) => (
                             <button
@@ -392,18 +396,18 @@ const AdminDashboard = () => {
                     <header className="h-24 px-10 border-b border-white/5 flex items-center justify-between glass-panel">
                         <div className="flex items-center gap-4">
                             <h2 className="text-2xl font-black italic tracking-tighter uppercase">
-                                {activeTab === 'dashboard' ? 'Panel de Control' : activeTab === 'asesores' ? 'Administrar Técnicos' : activeTab === 'funcionarios' ? 'Directorio Funcionarios' : 'Registro de Actividad'}
+                                {activeTab === 'dashboard' ? 'Panel de Control' : activeTab === 'asesores' ? 'Administrar Técnicos' : activeTab === 'funcionarios' ? 'Directorio Funcionarios' : activeTab === 'noticias' ? 'Gestión de Novedades' : 'Registro de Actividad'}
                             </h2>
                             <span className="px-3 py-1 bg-blue-500/10 text-blue-500 rounded-full text-[8px] font-black tracking-widest animate-pulse border border-blue-500/20 uppercase">Live Update</span>
                         </div>
 
                         <div className="flex items-center gap-6">
-                            {(activeTab === 'asesores' || activeTab === 'funcionarios') && (
+                            {(activeTab === 'asesores' || activeTab === 'funcionarios' || activeTab === 'noticias') && (
                                 <button
-                                    onClick={() => setModalConfig({ type: activeTab === 'asesores' ? 'asesor' : 'funcionario', mode: 'add' })}
+                                    onClick={() => setModalConfig({ type: activeTab === 'noticias' ? 'noticia' : (activeTab === 'asesores' ? 'asesor' : 'funcionario'), mode: 'add' })}
                                     className="px-6 py-3 bg-emerald-500 text-slate-950 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                                 >
-                                    <Plus size={16} /> Agregar {activeTab === 'asesores' ? 'Asesor' : 'Funcionario'}
+                                    <Plus size={16} /> Agregar {activeTab === 'asesores' ? 'Asesor' : activeTab === 'funcionarios' ? 'Funcionario' : 'Novedad'}
                                 </button>
                             )}
                             {(activeTab === 'soportes' || activeTab === 'dashboard') && (
@@ -665,6 +669,63 @@ const AdminDashboard = () => {
                             </div>
                         )}
 
+                        {/* --- TAB: NOTICIAS --- */}
+                        {activeTab === "noticias" && (
+                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {noticias.map((n) => (
+                                        <div key={n.id} className={cn(
+                                            "glass-panel p-10 rounded-[3rem] border transition-all relative group overflow-hidden",
+                                            n.activa ? "border-amber-500/30 shadow-[0_20px_40px_rgba(245,158,11,0.1)]" : "border-white/5 opacity-60"
+                                        )}>
+                                            <div className="flex justify-between items-start mb-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={cn("p-4 rounded-3xl", n.activa ? "bg-amber-500/10 text-amber-500" : "bg-slate-500/10 text-slate-500")}>
+                                                        <BellRing size={24} />
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Publicado en: {new Date(n.fecha_publicacion).toLocaleDateString()}</span>
+                                                        <h4 className="text-lg font-black uppercase text-white leading-tight mt-1 truncate max-w-[200px]">{n.contenido}</h4>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-3">
+                                                    <span className={cn("px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border", n.activa ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-slate-500/10 text-slate-500 border-white/10")}>
+                                                        {n.activa ? "VISIBLE" : "OCULTA"}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <p className="text-slate-400 text-sm font-medium leading-relaxed mb-8 h-20 overflow-hidden line-clamp-3 italic uppercase font-black">
+                                                {n.contenido}
+                                            </p>
+
+                                            <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                                                <div className="flex gap-4">
+                                                    <button onClick={() => setModalConfig({ type: 'noticia', mode: 'edit', data: n })} className="p-3 text-blue-500 hover:bg-blue-500/10 rounded-2xl transition-all border border-transparent hover:border-blue-500/20"><Edit2 size={18} /></button>
+                                                    <button onClick={() => { if (confirm('¿ELIMINAR NOVEDAD?')) handleAction('noticias', 'DELETE', n.id) }} className="p-3 text-rose-500 hover:bg-rose-500/10 rounded-2xl transition-all border border-transparent hover:border-rose-500/20"><Trash2 size={18} /></button>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleAction('noticias', 'PATCH', n.id, { activa: !n.activa })}
+                                                    className={cn(
+                                                        "px-6 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all",
+                                                        n.activa ? "bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500/20" : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20"
+                                                    )}
+                                                >
+                                                    {n.activa ? "Desactivar" : "Activar Ahora"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {noticias.length === 0 && (
+                                        <div className="col-span-2 py-20 text-center glass-panel rounded-[3rem] border border-white/5">
+                                            <Megaphone size={48} className="mx-auto text-slate-700 mb-6 opacity-20" />
+                                            <p className="text-slate-500 text-xs font-black uppercase tracking-[0.2em]">No hay noticias registradas</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* --- TAB: SOPORTES (LOGBOOK) --- */}
                         {activeTab === "soportes" && (
                             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
@@ -759,12 +820,13 @@ const AdminDashboard = () => {
                             const form = e.target as HTMLFormElement;
                             const fd = new FormData(form);
                             const data = Object.fromEntries(fd.entries());
-                            handleAction(
-                                modalConfig.type === 'asesor' ? 'asesores' : 'funcionarios',
-                                modalConfig.mode === 'add' ? 'POST' : 'PATCH',
-                                modalConfig.data?.id,
-                                data
-                            );
+                                handleAction(
+                                    modalConfig.type === 'asesor' ? 'asesores' : 
+                                    modalConfig.type === 'funcionario' ? 'funcionarios' : 'noticias',
+                                    modalConfig.mode === 'add' ? 'POST' : 'PATCH',
+                                    modalConfig.data?.id,
+                                    data
+                                );
                         }}>
                             <div className="grid grid-cols-2 gap-8">
                                 {modalConfig.type === 'asesor_history' ? (
@@ -864,6 +926,31 @@ const AdminDashboard = () => {
                                         <div className="space-y-4 col-span-2">
                                             <label className="text-[9px] font-black text-slate-500 uppercase px-1 tracking-widest text-[#00e5a0]">Contraseña de Acceso</label>
                                             <input name="password" defaultValue={modalConfig.data?.password} className="w-full bg-[#00e5a0]/5 border border-[#00e5a0]/20 p-5 rounded-2xl text-xs font-black outline-none focus:border-[#00e5a0]/50 text-[#00e5a0]" placeholder="ACCESO_TEC" />
+                                        </div>
+                                    </>
+                                ) : modalConfig.type === 'noticia' ? (
+                                    <>
+                                        <div className="col-span-2 space-y-4">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase px-1 tracking-widest">Novedad / Anuncio (Máx. 500 carac.)</label>
+                                            <textarea
+                                                name="contenido"
+                                                defaultValue={modalConfig.data?.contenido}
+                                                className="w-full bg-slate-500/5 border border-white/10 p-6 rounded-3xl text-sm font-black uppercase outline-none focus:border-amber-500/50 h-40 resize-none leading-relaxed"
+                                                required
+                                                placeholder="Ej: Estimados técnicos, favor reportar incidencias de internet..."
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-4 col-span-2">
+                                            <div className="flex items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/10">
+                                                <input
+                                                    type="checkbox"
+                                                    name="activa"
+                                                    id="activa_news"
+                                                    defaultChecked={modalConfig.mode === 'add' ? true : modalConfig.data?.activa}
+                                                    className="w-5 h-5 rounded border-white/10 bg-slate-900 text-amber-500"
+                                                />
+                                                <label htmlFor="activa_news" className="text-[10px] font-black uppercase text-white cursor-pointer select-none">Mostrar inmediatamente al soporte y despacho</label>
+                                            </div>
                                         </div>
                                     </>
                                 ) : (

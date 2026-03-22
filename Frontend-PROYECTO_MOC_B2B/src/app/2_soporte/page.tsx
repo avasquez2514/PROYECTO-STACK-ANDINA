@@ -3,10 +3,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import {
   X, Search, ClipboardList, FileText,
-  ChevronDown, Zap, MessageSquare,
-  Activity, LayoutDashboard, CheckCircle2, AlertCircle, Clock, Image as ImageIcon
+  ChevronDown, Zap, MessageSquare, Copy,
+  Activity, LayoutDashboard, CheckCircle2, AlertCircle, Clock, Image as ImageIcon, Megaphone
 } from "lucide-react";
 import ChatWindow from "../components/ChatWindow";
+import LiveTimer from "../components/LiveTimer";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
@@ -39,25 +40,24 @@ export default function SoportePage() {
 
   const [modalConfig, setModalConfig] = useState<{ id: number; text: string; title: string; evidencias?: string[] } | null>(null);
 
-  // Live Timer State
-  const [now, setNow] = useState(new Date());
+  // Live Timer State removed to optimize renders
 
   // Dropdown States
   const [openDropdownId, setOpenDropdownId] = useState<{ id: number; type: 'login' | 'estado' } | null>(null);
   const [openAdvisorDropdown, setOpenAdvisorDropdown] = useState<number | null>(null);
+  const [noticia, setNoticia] = useState<any>(null);
 
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // Global timer effect removed to avoid full table re-renders
 
   useEffect(() => {
     setHasMounted(true);
     cargarDatos();
     cargarAsesores();
+    cargarNoticia();
     const interval = setInterval(() => {
       cargarDatos();
       cargarAsesores();
+      cargarNoticia();
     }, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -75,6 +75,15 @@ export default function SoportePage() {
       const res = await fetch("http://127.0.0.1:8000/api/asesores/");
       const data = await res.json();
       setAsesoresSoporte(data);
+    } catch (e) { console.error(e); }
+  };
+
+  const cargarNoticia = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/noticias/");
+      const data = await res.json();
+      const activa = data.find((n: any) => n.activa);
+      setNoticia(activa || null);
     } catch (e) { console.error(e); }
   };
 
@@ -100,22 +109,38 @@ export default function SoportePage() {
     } catch (e) { console.error(e); }
   };
 
+  const decodificarObservaciones = (obs: string) => {
+    if (!obs) return "--";
+    try {
+      const parsed = JSON.parse(obs);
+      if (typeof parsed === 'object') {
+        return Object.entries(parsed)
+          .filter(([key, val]) => val && key !== 'incidente' && key !== 'tecnico')
+          .map(([_, val]) => `${val}`)
+          .join(" ");
+      }
+    } catch (e) { }
+    return obs;
+  };
+
   const formatearFecha = (f: string) => {
     if (!f) return "---";
     try {
-      // f is like "2026-03-17T22:02:37-05:00"
-      const [datePart, rest] = f.split('T');
-      const timePart = rest.split('-')[0].split('+')[0].split('.')[0];
-      
-      const [year, month, day] = datePart.split('-');
-      let [hour, minute, second] = timePart.split(':');
-      
-      let h = parseInt(hour, 10);
-      const ampm = h >= 12 ? 'p. m.' : 'a. m.';
-      h = h % 12;
-      h = h ? h : 12;
-      
-      return `${day}/${month}/${year} | ${h.toString().padStart(2, '0')}:${minute}:${second} ${ampm}`;
+      const date = new Date(f);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+
+      let hours = date.getHours();
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const seconds = date.getSeconds().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'p. m.' : 'a. m.';
+
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const strHours = hours.toString().padStart(2, '0');
+
+      return `${day}/${month}/${year} | ${strHours}:${minutes}:${seconds} ${ampm}`;
     } catch {
       return f;
     }
@@ -135,18 +160,7 @@ export default function SoportePage() {
       return jsonString;
     }
   };
-  const calcularTiempo = (inicio: string | null, fin: string | null) => {
-    if (!inicio) return "00h 00m 00s";
-    const start = new Date(inicio).getTime();
-    const end = fin ? new Date(fin).getTime() : now.getTime();
-    const diff = Math.max(0, end - start);
-
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
-
-    return `${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`;
-  };
+  // calcularTiempo removed from here, now encapsulated in LiveTimer
   const datosFiltrados = datos.filter(d =>
     !busqueda || d.incidente?.toLowerCase().includes(busqueda.toLowerCase()) || d.nombre?.toLowerCase().includes(busqueda.toLowerCase())
   );
@@ -303,7 +317,36 @@ export default function SoportePage() {
 
           </header>
 
-          <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar relative">
+          <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar relative">
+            {/* Noticia Panel Section */}
+            {noticia && (
+              <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="relative group overflow-hidden rounded-[2rem] p-[1px] bg-gradient-to-r from-amber-500/50 via-amber-400/20 to-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.15)]">
+                  <div className="relative flex items-center gap-6 px-8 py-5 bg-[#0b1621] rounded-[1.95rem]">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-amber-500/20 blur-xl rounded-full" />
+                      <div className="relative w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center text-amber-500">
+                        <Megaphone size={22} className="animate-bounce" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/80">AVISO IMPORTANTE DEL ADMINISTRADOR</span>
+                        <div className="h-[1px] flex-1 bg-gradient-to-r from-amber-500/30 to-transparent" />
+                      </div>
+                      <p className="text-sm font-black text-white/90 leading-relaxed uppercase italic">
+                        {noticia.contenido}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end opacity-40">
+                      <p className="text-[8px] font-black uppercase tracking-widest text-[#608096]">Publicado hoy</p>
+                      <p className="text-[10px] font-mono text-white/60">{new Date(noticia.fecha_publicacion).toLocaleTimeString()}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Stats Cards Section */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
               {[
@@ -340,11 +383,12 @@ export default function SoportePage() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto custom-scrollbar">
+              <div className="custom-scrollbar">
+                {/* Removido overflow-x-auto para evitar recortes de dropdowns */}
                 <table className="w-full text-left min-w-[1400px] border-collapse">
                   <thead>
                     <tr className="text-[9px] font-bold uppercase tracking-[0.1em] sticky top-0 z-20 text-[#608096] bg-[#060d14] border-b border-[#152233]">
-                      <th className="px-4 py-3">MARCA TEMPORAL</th>
+                      <th className="px-4 py-3">FECHA / HORA</th>
                       <th className="px-2 py-3 text-center">EN SITIO</th>
                       <th className="px-4 py-3">TÉCNICO</th>
                       <th className="px-4 py-3">CELULAR</th>
@@ -356,12 +400,19 @@ export default function SoportePage() {
                       <th className="px-2 py-3 text-center">PLANTILLA</th>
                       <th className="px-2 py-3 text-center">LOGIN N1</th>
                       <th className="px-2 py-3 text-center">ESTADO</th>
-                      <th className="px-4 py-3 text-right">TIEMPO</th>
+                      <th className="px-4 py-3 text-center">TIEMPO</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#152233]/40">
                     {datosFiltrados.map((d) => (
-                      <tr key={d.id} className="transition-all group border-l-4 border-transparent hover:border-[#00e5a0]/60 hover:bg-[#060d14]/60">
+                      <tr
+                        key={d.id}
+                        className={cn(
+                          "transition-all group border-l-4 border-transparent hover:border-[#00e5a0]/60 hover:bg-[#060d14]/60",
+                          d.prioridad ? "bg-rose-500/10 border-l-rose-500" : "",
+                          openDropdownId?.id === d.id ? "relative z-50 bg-[#060d14] shadow-[0_0_30px_rgba(0,0,0,0.9)]" : "relative z-0"
+                        )}
+                      >
                         <td className="px-4 py-3">
                           <p className="text-[11px] font-bold tracking-tight text-slate-300">{formatearFecha(d.fecha_hora).split('|')[1]}</p>
                           <p className="text-[9px] text-slate-400 font-medium">{formatearFecha(d.fecha_hora).split('|')[0]}</p>
@@ -386,9 +437,26 @@ export default function SoportePage() {
                           <span className="text-[11px] font-bold uppercase tracking-tighter truncate max-w-[150px] inline-block text-white">{d.torre}</span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="px-2.5 py-1 bg-[#0b1621] text-white rounded-lg font-mono font-black text-[10px] border border-white/20">
-                            {d.incidente || "INC-0000"}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-1 bg-[#0b1621] text-white rounded-lg font-mono font-black text-[10px] border border-white/20">
+                              {d.incidente || "INC-0000"}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                navigator.clipboard.writeText(d.incidente || "INC-0000");
+                                const btn = e.currentTarget;
+                                const originalHtml = btn.innerHTML;
+                                btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00e5a0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                                setTimeout(() => {
+                                  btn.innerHTML = originalHtml;
+                                }, 1500);
+                              }}
+                              className="p-1.5 hover:bg-[#00e5a0]/20 hover:text-[#00e5a0] text-[#608096] rounded-md transition-all border border-transparent hover:border-[#00e5a0]/30 shadow-sm"
+                              title="Copiar Incidente"
+                            >
+                              <Copy size={12} strokeWidth={2.5} />
+                            </button>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className={cn(
@@ -401,8 +469,8 @@ export default function SoportePage() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <p className="text-[11px] font-medium line-clamp-1 max-w-[250px] text-[#608096]">
-                            {d.observaciones || "--"}
+                          <p className="text-[10px] font-medium line-clamp-2 max-w-[300px] text-slate-400 group-hover:text-white transition-colors" title={decodificarObservaciones(d.observaciones)}>
+                            {decodificarObservaciones(d.observaciones)}
                           </p>
                         </td>
                         <td className="px-2 py-3 text-center">
@@ -415,9 +483,11 @@ export default function SoportePage() {
                           >
                             <MessageSquare size={14} strokeWidth={2} />
                             {d.chat_visto_soporte === false && (
-                              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600 border-2 border-white"></span>
+                              <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center">
+                                <span className="absolute inline-flex h-full w-full rounded-full bg-[#00e5a0] opacity-50 animate-ping shadow-[0_0_15px_#00e5a0]"></span>
+                                <span className="relative inline-flex rounded-full h-full w-full bg-[#00e5a0] border-2 border-[#060d14] shadow-[0_0_10px_rgba(0,229,160,0.8)] items-center justify-center">
+                                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse shadow-sm"></span>
+                                </span>
                               </span>
                             )}
                           </button>
@@ -427,7 +497,7 @@ export default function SoportePage() {
                             onClick={() => {
                               const textoFormateado = formatearPlantilla(d.plantilla || "{}");
                               let evList = [];
-                              try { if(d.evidencias) evList = JSON.parse(d.evidencias); } catch(e){}
+                              try { if (d.evidencias) evList = JSON.parse(d.evidencias); } catch (e) { }
                               setModalConfig({ id: d.id, text: textoFormateado, title: "PLANTILLA TÉCNICA", evidencias: evList });
                             }}
                             className="p-2 border rounded-xl transition-all flex items-center justify-center mx-auto hover:bg-[#00b8e5]/5 bg-[#060d14] border-[#152233] text-[#608096]"
@@ -436,16 +506,16 @@ export default function SoportePage() {
                           </button>
                         </td>
                         <td className="px-2 py-3 text-center">
-                          <div className="relative">
+                          <div className={cn("relative flex justify-center", openDropdownId?.id === d.id && openDropdownId?.type === 'login' ? "z-50" : "z-0")}>
                             <button
-                              onClick={() => setOpenDropdownId(openDropdownId?.id === d.id && openDropdownId.type === 'login' ? null : { id: d.id, type: 'login' })}
+                              onClick={() => setOpenDropdownId(openDropdownId?.id === d.id && openDropdownId?.type === 'login' ? null : { id: d.id, type: 'login' })}
                               className="w-32 border text-[9px] font-black uppercase py-2 px-3 rounded-xl flex items-center justify-between transition-all active:scale-95 bg-[#060d14] border-[#152233] text-white hover:border-[#00e5a0]/30"
                             >
                               <span className="truncate pr-2">{d.login_n1 === "POR_ASIGNAR" ? "--" : d.login_n1}</span>
-                              <ChevronDown size={10} className={cn("text-white/40 transition-transform", openDropdownId?.id === d.id && openDropdownId.type === 'login' && "rotate-180")} />
+                              <ChevronDown size={10} className={cn("text-white/40 transition-transform", openDropdownId?.id === d.id && openDropdownId?.type === 'login' && "rotate-180")} />
                             </button>
 
-                            {openDropdownId?.id === d.id && openDropdownId.type === 'login' && (
+                            {openDropdownId?.id === d.id && openDropdownId?.type === 'login' && (
                               <>
                                 <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownId(null)} />
                                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-40 z-50 rounded-2xl border border-[#152233] bg-[#0b1621]/95 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-200">
@@ -474,62 +544,55 @@ export default function SoportePage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-8 py-3 text-center">
-                          <div className="relative">
-                            <button
-                              onClick={() => setOpenDropdownId(openDropdownId?.id === d.id && openDropdownId.type === 'estado' ? null : { id: d.id, type: 'estado' })}
-                              className={cn(
-                                "w-28 border text-[9px] font-black rounded-xl py-1.5 px-3 flex items-center justify-between transition-all active:scale-95",
-                                d.estado === 'Resuelto' || d.estado === 'ACTIVO' ? 'bg-emerald-600/10 text-emerald-600 border-emerald-600/20 shadow-[0_0_15px_rgba(5,150,105,0.1)]' :
-                                  d.estado === 'En gestión' || d.estado === 'PENDIENTE' ? 'bg-[#00b8e5]/10 text-[#00b8e5] border-[#00b8e5]/20 shadow-[0_0_15px_rgba(0,184,229,0.1)]' :
-                                    d.estado === 'Enrutado' ? 'bg-amber-400/10 text-amber-400 border-amber-400/20 shadow-[0_0_15px_rgba(251,191,36,0.1)]' :
-                                      d.estado === 'Mal Escalado' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]' :
-                                        "bg-[#060d14] text-white border-[#152233]"
-                              )}
-                            >
-                              <span className="truncate pr-1 uppercase">{d.estado}</span>
-                              <ChevronDown size={10} className={cn("transition-transform", openDropdownId?.id === d.id && openDropdownId.type === 'estado' && "rotate-180")} />
-                            </button>
-
-                            {openDropdownId?.id === d.id && openDropdownId.type === 'estado' && (
-                              <>
-                                <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownId(null)} />
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-40 z-50 rounded-2xl border border-[#152233] bg-[#0b1621]/95 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-200">
-                                  {estadosGestion.map(e => (
-                                    <button
-                                      key={e}
-                                      onClick={() => {
-                                        actualizarSoporte(d.id, "estado", e);
-                                        setOpenDropdownId(null);
-                                      }}
-                                      className={cn(
-                                        "w-full px-5 py-3 text-[9px] font-black text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 uppercase italic",
-                                        e === 'Resuelto' ? 'text-emerald-500' :
-                                          e === 'En gestión' ? 'text-[#00b8e5]' :
-                                            e === 'Enrutado' ? 'text-amber-400' :
-                                              e === 'Mal Escalado' ? 'text-rose-500' : 'text-white/50'
-                                      )}
-                                    >
-                                      {e}
-                                    </button>
-                                  ))}
-                                </div>
-                              </>
+                        <td className="px-8 py-3 text-center relative">
+                          <div
+                            className={cn(
+                              "w-28 border text-[9px] font-black rounded-xl py-1.5 px-3 flex items-center justify-between mx-auto opacity-80 cursor-pointer hover:opacity-100 transition-all",
+                              d.estado === 'Resuelto' || d.estado === 'ACTIVO' ? 'bg-emerald-600/10 text-emerald-600 border-emerald-600/20 hover:bg-emerald-600/20' :
+                                d.estado === 'En gestión' || d.estado === 'PENDIENTE' ? 'bg-[#00b8e5]/10 text-[#00b8e5] border-[#00b8e5]/20 hover:bg-[#00b8e5]/20' :
+                                  d.estado === 'Enrutado' ? 'bg-amber-400/10 text-amber-400 border-amber-400/20 hover:bg-amber-400/20' :
+                                    d.estado === 'Mal Escalado' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500/20' :
+                                      "bg-[#060d14] text-white border-[#152233]"
                             )}
+                            onClick={() => setOpenDropdownId(openDropdownId?.id === d.id && openDropdownId?.type === 'estado' ? null : { id: d.id, type: 'estado' })}
+                          >
+                            <span className="truncate pr-1 uppercase">{d.estado || "---"}</span>
+                            <ChevronDown size={10} className="opacity-40" />
                           </div>
+
+                          {/* Menú Desplegable ESTADO */}
+                          {openDropdownId?.id === d.id && openDropdownId?.type === 'estado' && (
+                            <div className="absolute top-[85%] left-1/2 -translate-x-1/2 z-[100] mt-1 w-36 bg-[#0b1621] border border-[#152233] rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                              {estadosGestion.map(st => (
+                                <button
+                                  key={st}
+                                  onClick={() => {
+                                    actualizarSoporte(d.id, "estado", st);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className={cn(
+                                    "w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all text-white border-b border-white/5 last:border-0",
+                                    d.estado === st ? "bg-white/5 text-amber-400" : ""
+                                  )}
+                                >
+                                  {st}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-center">
                           <span className={cn(
-                            "text-[10px] font-black px-3 py-1.5 rounded-xl transition-all inline-flex items-center gap-2",
-                            d.estado === 'Resuelto' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' :
-                              d.estado === 'Enrutado' ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' :
-                                d.estado === 'Mal Escalado' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' :
-                                  'bg-white/5 text-white border border-white/10'
+                            "text-[10px] font-black px-3 py-1.5 rounded-xl transition-all inline-flex items-center justify-center gap-2",
+                            d.estado === 'Resuelto' ? 'text-emerald-500 animate-pulse-slow' :
+                              d.estado === 'Enrutado' ? 'text-amber-400' :
+                                d.estado === 'Mal Escalado' ? 'text-rose-500' :
+                                  'text-white'
                           )}>
                             {!d.fecha_fin && d.fecha_inicio_sitio && (
                               <div className="w-1 h-1 rounded-full bg-current animate-pulse shadow-[0_0_8px_currentColor]" />
                             )}
-                            {calcularTiempo(d.fecha_inicio_sitio, d.fecha_fin)}
+                            <LiveTimer inicio={d.fecha_inicio_sitio} fin={d.fecha_fin} />
                           </span>
                         </td>
                       </tr>

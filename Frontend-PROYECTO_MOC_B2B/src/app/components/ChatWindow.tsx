@@ -99,6 +99,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
 
             if (data.remitente !== remitenteActual) {
                 markAsRead();
+                // Sonido de notificación para el receptor
+                try {
+                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+                    audio.volume = 0.5;
+                    audio.play();
+                } catch (e) {
+                    console.log("Audio play blocked by browser policy");
+                }
             }
         };
         ws.onerror = (error) => console.error("❌ WebSocket Error", error);
