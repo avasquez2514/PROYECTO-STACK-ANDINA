@@ -1,7 +1,7 @@
 // /app/api/tecnico/route.js
 import { NextResponse } from "next/server";
 
-export async function POST(req) {
+export async function POST(req: Request) {
   try {
     const data = await req.json();
     console.log("📩 Datos recibidos en Next:", data);

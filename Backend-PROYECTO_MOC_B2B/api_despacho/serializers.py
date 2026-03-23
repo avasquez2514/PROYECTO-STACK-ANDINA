@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import Soporte, AsesorSoporte, Funcionario, HistorialEstadoAsesor, ChatMessage, Noticia
+from .models import Soporte, AsesorSoporte, Funcionario, HistorialEstadoAsesor, ChatMessage, Noticia, SoporteEvidencia
+
+
+class SoporteEvidenciaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SoporteEvidencia
+        fields = '__all__'
 
 
 class SoporteSerializer(serializers.ModelSerializer):
@@ -16,6 +22,8 @@ class SoporteSerializer(serializers.ModelSerializer):
             asesor = AsesorSoporte.objects.filter(login=obj.login_n1).first()
             return asesor.nombre_asesor if asesor else obj.login_n1
         return "PENDIENTE"
+
+    evidencias_files = SoporteEvidenciaSerializer(many=True, read_only=True)
 
 
 class HistorialEstadoAsesorSerializer(serializers.ModelSerializer):

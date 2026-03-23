@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import ChatWindow from "../components/ChatWindow";
 import LiveTimer from "../components/LiveTimer";
+import NoticiaPanel from "../components/NoticiaPanel";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
@@ -16,6 +17,12 @@ const estadosAsesorConfig: Record<string, { bg: string, dot: string, border: str
   "EN_DESCANSO": { bg: "bg-slate-500/10 text-slate-400", dot: "bg-slate-500 shadow-slate-500/50", border: "border-white/5" },
   "NO_DISPONIBLE": { bg: "bg-rose-500/10 text-rose-500", dot: "bg-rose-500 shadow-rose-500/50", border: "border-rose-500/20" },
   "CASO_COMPLEJO": { bg: "bg-amber-500/10 text-amber-500", dot: "bg-amber-500 shadow-amber-500/50", border: "border-amber-500/20" }
+};
+
+const PERFILES_CONFIG: any = {
+  "EN_CIERRES": { label: "Cierres", color: "text-amber-400", bg: "bg-amber-400/10" },
+  "SOLO_SOPORTES": { label: "Soporte", color: "text-amber-400", bg: "bg-amber-400/10" },
+  "TODO": { label: "Todo gestión:", color: "text-amber-400", bg: "bg-amber-400/10" }
 };
 
 export default function DespachoPage() {
@@ -31,7 +38,7 @@ export default function DespachoPage() {
   const [noticia, setNoticia] = useState<any>(null);
 
   const [openDropdownId, setOpenDropdownId] = useState<{ id: number; type: string } | null>(null);
-  const [modalConfig, setModalConfig] = useState<{ id: number; text: string; title: string } | null>(null);
+  const [modalConfig, setModalConfig] = useState<{ id: number; text: string; title: string; evidencias?: string[] } | null>(null);
 
   // Live Timer State removed to optimize renders
 
@@ -224,6 +231,12 @@ export default function DespachoPage() {
                       <span className={cn("text-[7px] font-bold uppercase opacity-60", conf.bg.replace('bg-', 'text-'))}>
                         {a.estado.substring(0, 10)}
                       </span>
+                      {/* Profile label */}
+                      {a.perfil && PERFILES_CONFIG[a.perfil] && (
+                        <span className={cn("text-[6px] font-black uppercase mt-1 px-1.5 py-0.5 rounded-md border border-white/5 animate-blink", PERFILES_CONFIG[a.perfil].bg, PERFILES_CONFIG[a.perfil].color)}>
+                          {PERFILES_CONFIG[a.perfil].label}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -271,33 +284,7 @@ export default function DespachoPage() {
 
           <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar relative">
             {/* Noticia Panel Section */}
-            {noticia && (
-              <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                <div className="relative group overflow-hidden rounded-[2rem] p-[1px] bg-gradient-to-r from-amber-500/50 via-amber-400/20 to-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.15)]">
-                  <div className="relative flex items-center gap-6 px-8 py-5 bg-[#0b1621] rounded-[1.95rem]">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-amber-500/20 blur-xl rounded-full" />
-                      <div className="relative w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center text-amber-500">
-                        <Megaphone size={22} className="animate-bounce" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-1">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/80">AVISO IMPORTANTE DEL ADMINISTRADOR</span>
-                        <div className="h-[1px] flex-1 bg-gradient-to-r from-amber-500/30 to-transparent" />
-                      </div>
-                      <p className="text-sm font-black text-white/90 leading-relaxed uppercase italic">
-                        {noticia.contenido}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end opacity-40">
-                      <p className="text-[8px] font-black uppercase tracking-widest text-[#608096]">Publicado hoy</p>
-                      <p className="text-[10px] font-mono text-white/60">{new Date(noticia.fecha_publicacion).toLocaleTimeString()}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            <NoticiaPanel noticia={noticia} />
 
             {/* Stats Cards Section */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
@@ -421,7 +408,13 @@ export default function DespachoPage() {
                           <button
                             onClick={() => {
                               const textoFormateado = formatearPlantilla(d.plantilla || "{}");
-                              setModalConfig({ id: d.id, text: textoFormateado, title: "PLANTILLA TÉCNICA" });
+                              let evList: string[] = [];
+                              if (d.evidencias_files && (d.evidencias_files as any[]).length > 0) {
+                                evList = (d.evidencias_files as any[]).map(f => `http://127.0.0.1:8000${f.archivo}`);
+                              } else {
+                                try { if (d.evidencias) evList = JSON.parse(d.evidencias); } catch (e) { }
+                              }
+                              setModalConfig({ id: d.id, text: textoFormateado, title: "PLANTILLA TÉCNICA", evidencias: evList });
                             }}
                             className="p-2 border rounded-xl transition-all flex items-center justify-center mx-auto hover:bg-[#00b8e5]/5 bg-[#060d14] border-[#152233] text-[#608096]"
                           >

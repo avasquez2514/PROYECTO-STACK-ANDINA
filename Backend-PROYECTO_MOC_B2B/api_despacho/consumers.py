@@ -1,4 +1,7 @@
 import json
+import base64
+import uuid
+from django.core.files.base import ContentFile
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import ChatMessage, Soporte
@@ -75,9 +78,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             soporte.chat_visto_soporte = False
             soporte.save(update_fields=['chat_visto_soporte'])
             
+        file_obj = None
+        if imagen and isinstance(imagen, str) and imagen.startswith('data:image'):
+            try:
+                format, imgstr = imagen.split(';base64,')
+                ext = format.split('/')[-1]
+                filename = f"chat_{soporte_id}_{uuid.uuid4().hex[:8]}.{ext}"
+                file_obj = ContentFile(base64.b64decode(imgstr), name=filename)
+            except Exception as e:
+                print(f"Error decoding image: {e}")
+
         return ChatMessage.objects.create(
             soporte=soporte,
             remitente=remitente,
             mensaje=message,
-            imagen=imagen
+            imagen=file_obj
         )

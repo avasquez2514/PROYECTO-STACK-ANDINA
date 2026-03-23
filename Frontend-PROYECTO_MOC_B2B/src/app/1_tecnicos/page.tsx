@@ -72,6 +72,10 @@ export default function TecnicosPage() {
     const [showPassModal, setShowPassModal] = useState(false);
     const [newPassword, setNewPassword] = useState("");
 
+    // Change Name State
+    const [showNameModal, setShowNameModal] = useState(false);
+    const [newName, setNewName] = useState("");
+
     useEffect(() => {
         setHasMounted(true);
         const userLocal = localStorage.getItem("phoenix_tech_user");
@@ -301,7 +305,16 @@ export default function TecnicosPage() {
                             <span className="w-1.5 h-1.5 rounded-full bg-[#00e5a0] shadow-[0_0_5px_#00e5a0] animate-pulse"></span>
                             CONECTADO COMO
                         </span>
-                        <span className="text-xs font-black uppercase text-white tracking-widest">{loggedUser}</span>
+                        <button 
+                            onClick={() => {
+                                setNewName(loggedUser);
+                                setShowNameModal(true);
+                            }}
+                            className="text-xs font-black uppercase text-white tracking-widest hover:text-[#00e5a0] transition-colors flex items-center gap-2 group/edit"
+                        >
+                            {loggedUser}
+                            <Plus size={10} className="opacity-30 group-hover/edit:opacity-100 transition-opacity" />
+                        </button>
                     </div>
                 </div>
 
@@ -712,6 +725,73 @@ export default function TecnicosPage() {
                                     className="flex-1 px-6 py-4 bg-[#00e5a0]/10 border border-[#00e5a0] text-[#00e5a0] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#00e5a0]/20 transition-all shadow-[0_0_20px_rgba(0,229,160,0.1)]"
                                 >
                                     ACTUALIZAR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Change Profile/Name Modal */}
+            {showNameModal && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-[#020617]/95 backdrop-blur-3xl animate-in fade-in duration-300">
+                    <div className="w-full max-w-sm bg-[#0b1621] border border-[#152233] p-10 rounded-[3rem] shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#00e5a0]/10 blur-[60px] rounded-full -mr-16 -mt-16 group-hover:bg-[#00e5a0]/20 transition-all duration-1000" />
+                        
+                        <div className="relative space-y-8 text-center">
+                            <div className="w-20 h-20 bg-[#00e5a0]/10 border border-[#00e5a0]/30 rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl shadow-[#00e5a0]/10 group-hover:scale-105 transition-all duration-500">
+                                <User size={32} className="text-[#00e5a0]" />
+                            </div>
+
+                            <div className="space-y-3">
+                                <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-tight">IDENTIDAD <span className="text-[#00e5a0]">OPERATIVA</span></h3>
+                                <p className="text-[9px] text-[#608096] font-bold uppercase tracking-[0.4em]">MODIFICAR DISPLAY NAME</p>
+                            </div>
+
+                            <div className="space-y-4 text-left">
+                                <label className="text-[9px] text-[#608096] font-black uppercase tracking-widest pl-2">NUEVO NOMBRE DE USUARIO</label>
+                                <div className="relative">
+                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#608096]" />
+                                    <input
+                                        type="text"
+                                        value={newName}
+                                        autoFocus
+                                        onChange={e => setNewName(e.target.value.toUpperCase())}
+                                        placeholder="EJ. ANDERSON VASQUEZ"
+                                        className="w-full bg-[#060d14] border border-[#152233] rounded-xl pl-12 pr-4 py-4 text-xs text-white outline-none focus:border-[#00e5a0]/50 transition-all font-black tracking-widest placeholder:text-[#152233]"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                                <button
+                                    onClick={() => setShowNameModal(false)}
+                                    className="flex-1 px-6 py-4 border border-[#152233] text-[#608096] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/5 transition-all outline-none"
+                                >
+                                    CANCELAR
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (!newName.trim()) {
+                                            showNotify("INGRESE UN NOMBRE VÁLIDO", "error");
+                                            return;
+                                        }
+                                        setLoggedUser(newName);
+                                        // Update in localStorage as well
+                                        const userLocal = localStorage.getItem("phoenix_tech_user");
+                                        if (userLocal) {
+                                            try {
+                                                const u = JSON.parse(userLocal);
+                                                u.nombre_funcionario = newName;
+                                                localStorage.setItem("phoenix_tech_user", JSON.stringify(u));
+                                            } catch(e) {}
+                                        }
+                                        setShowNameModal(false);
+                                        showNotify("IDENTIDAD ACTUALIZADA EXITOSAMENTE", "success");
+                                    }}
+                                    className="flex-1 px-6 py-4 bg-[#00e5a0]/10 border border-[#00e5a0] text-[#00e5a0] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#00e5a0]/20 transition-all shadow-[0_0_20px_rgba(0,229,160,0.1)] outline-none"
+                                >
+                                    GUARDAR
                                 </button>
                             </div>
                         </div>

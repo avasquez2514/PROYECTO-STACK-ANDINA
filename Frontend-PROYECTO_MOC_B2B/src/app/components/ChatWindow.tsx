@@ -273,10 +273,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
                                     {msg.imagen && (
                                         <div className="p-1.5">
                                             <img 
-                                                src={msg.imagen} 
+                                                src={msg.imagen.startsWith('data:') ? msg.imagen : `http://127.0.0.1:8000${msg.imagen}`} 
                                                 alt="Chat attachment" 
                                                 className="rounded-2xl max-h-[350px] w-full object-cover cursor-pointer hover:scale-[1.01] transition-transform shadow-lg"
-                                                onClick={() => window.open(msg.imagen)}
+                                                onClick={() => window.open(msg.imagen.startsWith('data:') ? msg.imagen : `http://127.0.0.1:8000${msg.imagen}`)}
                                             />
                                         </div>
                                     )}

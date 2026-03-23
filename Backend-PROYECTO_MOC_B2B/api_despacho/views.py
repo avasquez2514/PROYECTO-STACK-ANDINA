@@ -9,6 +9,25 @@ class SoporteViewSet(viewsets.ModelViewSet):
     queryset = Soporte.objects.all()
     serializer_class = SoporteSerializer
 
+    def create(self, request, *args, **kwargs):
+        # El serializer maneja los campos normales
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        soporte = serializer.save()
+        
+        # Procesar archivos de evidencia que vengan como archivos reales en el multipart
+        # Se esperan llaves como evidencia_0, evidencia_1, etc.
+        from .models import SoporteEvidencia
+        for key in request.FILES:
+            if key.startswith('evidencia_'):
+                SoporteEvidencia.objects.create(
+                    soporte=soporte,
+                    archivo=request.FILES[key]
+                )
+                
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
 
 class AsesorSoporteViewSet(viewsets.ModelViewSet):
     queryset = AsesorSoporte.objects.all().order_by("id")

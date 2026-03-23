@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
     Users, BarChart3, Download, Clock, ShieldCheck,
-    Settings, Search, Sun, Moon, Briefcase,
+    Settings, Search, Sun, Moon, Briefcase, Zap, Coffee, User, MoreVertical,
     Activity, ArrowUpRight, Filter, Database,
     FileSpreadsheet, ClipboardCheck, AlertTriangle,
     Plus, Edit2, Trash2, X, Check, ChevronRight, UserPlus, HardDrive, UserCheck,
@@ -16,9 +16,9 @@ import 'jspdf-autotable';
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
 const PERFILES_CONFIG: any = {
-    "EN_CIERRES": { label: "En Cierres", color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-    "SOLO_SOPORTES": { label: "Solo Soportes", color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-    "TODO": { label: "Todo tipo de gestión", color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" }
+    "EN_CIERRES": { label: "Cierres", color: "text-amber-400", bg: "bg-amber-400/10", border: "border-amber-400/20" },
+    "SOLO_SOPORTES": { label: "Soporte", color: "text-amber-400", bg: "bg-amber-400/10", border: "border-amber-400/20" },
+    "TODO": { label: "Todo gestión", color: "text-amber-400", bg: "bg-amber-400/10", border: "border-amber-400/20" }
 };
 
 const ESTADOS_CONFIG: any = {
@@ -26,6 +26,26 @@ const ESTADOS_CONFIG: any = {
     "EN_DESCANSO": { label: "En descanso", color: "text-rose-500", dot: "bg-rose-500 shadow-rose-500/50" },
     "NO_DISPONIBLE": { label: "No disponible", color: "text-slate-500", dot: "bg-slate-500 shadow-slate-500/10" },
     "CASO_COMPLEJO": { label: "Caso complejo", color: "text-amber-500", dot: "bg-amber-500 shadow-amber-500/50" }
+};
+
+const StatusTimer = ({ lastChange }: { lastChange: string }) => {
+    const [display, setDisplay] = useState("0s");
+
+    useEffect(() => {
+        const calculate = () => {
+            if (!lastChange) return "0s";
+            const diff = Math.floor((new Date().getTime() - new Date(lastChange).getTime()) / 1000);
+            if (diff < 60) return `${diff}s`;
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ${diff % 60}s`;
+            return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
+        };
+
+        setDisplay(calculate());
+        const timer = setInterval(() => setDisplay(calculate()), 1000);
+        return () => clearInterval(timer);
+    }, [lastChange]);
+
+    return <span>{display}</span>;
 };
 
 const AdminDashboard = () => {
@@ -115,9 +135,15 @@ const AdminDashboard = () => {
             if (res.ok) {
                 fetchData();
                 setModalConfig(null);
+                alert(`${action === 'POST' ? 'REGISTRO CREADO' : 'CAMBIOS GUARDADOS'} EXITOSAMENTE`);
+            } else {
+                const errorData = await res.json();
+                console.error(`Error in ${action} ${type}:`, errorData);
+                alert(`ERROR AL PROCESAR: ${JSON.stringify(errorData)}`);
             }
         } catch (error) {
             console.error(`Error in ${action} ${type}:`, error);
+            alert("ERROR DE CONEXIÓN CON EL SERVIDOR");
         }
     };
 
@@ -134,6 +160,31 @@ const AdminDashboard = () => {
             h = h ? h : 12;
             return `${day}/${month}/${year} ${h.toString().padStart(2, '0')}:${minute} ${ampm}`;
         } catch { return f; }
+    };
+
+    const handleClearHistory = async (asesorId: number) => {
+        if (!confirm("¿ESTÁ SEGURO DE VACIAR TODO EL HISTORIAL DE ESTE ASESOR? ESTA ACCIÓN NO SE PUEDE DESHACER.")) return;
+
+        try {
+            // Asumiendo que el backend soporta un DELETE masivo por query param o similar
+            // Si no, podríamos iterar, pero lo ideal es un endpoint dedicado.
+            // Ajustamos a la URL probable de eliminación masiva por asesor.
+            const res = await fetch(`http://127.0.0.1:8000/api/asesor_history/?asesor=${asesorId}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                alert("HISTORIAL VACIADO EXITOSAMENTE");
+                setModalConfig(null);
+                fetchData();
+            } else {
+                const err = await res.json();
+                alert(`ERROR AL VACIAR: ${JSON.stringify(err)}`);
+            }
+        } catch (error) {
+            console.error("Error clearing history:", error);
+            alert("ERROR DE CONEXIÓN CON EL SERVIDOR");
+        }
     };
 
     const exportToExcel = () => {
@@ -276,8 +327,14 @@ const AdminDashboard = () => {
                                     <input
                                         type="text"
                                         value={credentials.user}
-                                        onChange={(e) => setCredentials(prev => ({ ...prev, user: e.target.value }))}
-                                        className="w-full pl-16 pr-6 py-5 bg-slate-950/50 border border-white/5 rounded-3xl text-sm font-bold text-white outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-800"
+                                        onChange={(e) => {
+                                            setCredentials(prev => ({ ...prev, user: e.target.value }));
+                                            if (loginError) setLoginError(false);
+                                        }}
+                                        className={cn(
+                                            "w-full pl-16 pr-6 py-5 bg-slate-950/50 border rounded-3xl text-sm font-bold text-white outline-none transition-all placeholder:text-slate-800",
+                                            loginError ? "border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.1)]" : "border-white/5 focus:border-blue-500/50"
+                                        )}
                                         placeholder="USUARIO"
                                         required
                                     />
@@ -291,8 +348,14 @@ const AdminDashboard = () => {
                                     <input
                                         type="password"
                                         value={credentials.pass}
-                                        onChange={(e) => setCredentials(prev => ({ ...prev, pass: e.target.value }))}
-                                        className="w-full pl-16 pr-6 py-5 bg-slate-950/50 border border-white/5 rounded-3xl text-sm font-bold text-white outline-none focus:border-blue-500/50 transition-all placeholder:text-slate-800"
+                                        onChange={(e) => {
+                                            setCredentials(prev => ({ ...prev, pass: e.target.value }));
+                                            if (loginError) setLoginError(false);
+                                        }}
+                                        className={cn(
+                                            "w-full pl-16 pr-6 py-5 bg-slate-950/50 border rounded-3xl text-sm font-bold text-white outline-none transition-all placeholder:text-slate-800",
+                                            loginError ? "border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.1)]" : "border-white/5 focus:border-blue-500/50"
+                                        )}
                                         placeholder="••••••••"
                                         required
                                     />
@@ -300,9 +363,14 @@ const AdminDashboard = () => {
                             </div>
 
                             {loginError && (
-                                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-center gap-3 animate-in fade-in slide-in-from-top-2">
-                                    <AlertTriangle size={14} className="text-rose-500" />
-                                    <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Credenciales Inválidas</span>
+                                <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-center gap-4 animate-shake shadow-[0_0_20px_rgba(244,63,94,0.1)]">
+                                    <div className="w-10 h-10 bg-rose-500/20 rounded-xl flex items-center justify-center shrink-0">
+                                        <AlertTriangle size={18} className="text-rose-500" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-rose-500 uppercase tracking-tighter">Acceso Denegado</span>
+                                        <span className="text-[8px] font-bold text-rose-400/60 uppercase tracking-widest">Error de Autenticación</span>
+                                    </div>
                                 </div>
                             )}
 
@@ -352,10 +420,10 @@ const AdminDashboard = () => {
                         {[
                             { id: "dashboard", label: "Dashboard Real-Time", icon: BarChart3 },
                             { id: "asesores", label: "Gestión de Asesores", icon: Users },
-                            { id: "funcionarios", label: "Base de Funcionarios", icon: UserCheck },
+                            { id: "funcionarios", label: "Gestión de Funcionarios", icon: UserCheck },
                             { id: "historico_asesores", label: "Histórico de Asesores", icon: History },
+                            { id: "soportes", label: "Histórico de Incidentes", icon: Database },
                             { id: "noticias", label: "Panel de Noticias", icon: Megaphone },
-                            { id: "soportes", label: "Histórico de Incidentes", icon: Database }
                         ].map((tab) => (
                             <button
                                 key={tab.id}
@@ -447,56 +515,98 @@ const AdminDashboard = () => {
                             <>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                                     {[
-                                        { label: "GESTIONES TOTALES", value: totalStats.total, icon: Database, color: "blue" },
-                                        { label: "CIERRES EXITOSOS", value: totalStats.cierres, icon: ClipboardCheck, color: "emerald" },
-                                        { label: "PENDIENTES POR ASIGNAR", value: totalStats.pendientes, icon: Briefcase, color: "amber" },
-                                        { label: "ASESORES EN GESTIÓN", value: totalStats.en_gestion, icon: Activity, color: "emerald" },
-                                        { label: "EN DESCANSO", value: totalStats.en_descanso, icon: Clock, color: "rose" }
+                                        { label: "GESTIONES TOTALES", value: totalStats.total, icon: Database, color: "text-blue-500", bg: "bg-blue-500/10" },
+                                        { label: "CIERRES EXITOSOS", value: totalStats.cierres, icon: ClipboardCheck, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                                        { label: "PENDIENTES", value: totalStats.pendientes, icon: Briefcase, color: "text-amber-500", bg: "bg-amber-500/10" },
+                                        { label: "EN GESTION", value: totalStats.en_gestion, icon: Zap, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                                        { label: "EN DESCANSO", value: totalStats.en_descanso, icon: Coffee, color: "text-rose-500", bg: "bg-rose-500/10" }
                                     ].map((stat, i) => (
-                                        <div key={i} className="glass-panel p-6 rounded-[2rem] border border-white/5 group hover:border-blue-500/30 transition-all">
-                                            <div className={cn("p-4 rounded-2xl w-fit mb-4 text-" + stat.color + "-500 bg-slate-500/5")}>
-                                                <stat.icon size={22} />
+                                        <div key={i} className="glass-panel p-6 rounded-[2.5rem] border border-white/5 relative overflow-hidden group hover:scale-[1.02] transition-all duration-500 shadow-2xl shadow-black/20">
+                                            <div className={cn("absolute top-0 right-0 w-24 h-24 blur-[40px] rounded-full -mr-12 -mt-12 transition-all duration-1000 group-hover:blur-[60px]", stat.bg)} />
+                                            <div className="relative z-10">
+                                                <div className={cn("p-4 rounded-2xl w-fit mb-4 shadow-lg", stat.bg, stat.color)}>
+                                                    <stat.icon size={22} className="group-hover:scale-110 transition-transform duration-500" />
+                                                </div>
+                                                <p className="text-[9px] font-black text-slate-500 tracking-[0.2em] uppercase mb-1">{stat.label}</p>
+                                                <p className="text-3xl font-black italic tracking-tighter text-white">{stat.value}</p>
                                             </div>
-                                            <p className="text-[10px] font-black text-slate-500 tracking-[0.2em] uppercase mb-1">{stat.label}</p>
-                                            <p className="text-3xl font-black italic tracking-tighter">{stat.value}</p>
                                         </div>
                                     ))}
                                 </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                                    <div className="lg:col-span-2 space-y-6">
-                                        <div className="flex items-center gap-3 border-b border-white/5 pb-4"><Activity className="text-blue-500" size={18} /><h3 className="text-[12px] font-black uppercase italic tracking-wider">Estado en Vivo del Personal</h3></div>
+                                    <div className="lg:col-span-2 space-y-8">
+                                        <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-500 shadow-inner">
+                                                    <Activity size={24} className="animate-pulse" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-[14px] font-black uppercase italic tracking-wider text-white">Live Monitoring Unit</h3>
+                                                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-[0.4em]">Personal en Operación en Tiempo Real</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-3">
+                                                {Object.entries(ESTADOS_CONFIG).slice(0, 3).map(([key, cfg]: [string, any]) => (
+                                                    <div key={key} className="hidden md:flex items-center gap-3 px-4 py-2 bg-slate-900/50 rounded-xl border border-white/5 shadow-inner">
+                                                        <div className={cn("w-2 h-2 rounded-full", cfg.dot)} />
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase">{asesores.filter(a => a.estado === key).length}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             {asesores.slice(0, 6).map((a) => {
                                                 const stats = getStatsPerAsesor(a.login);
                                                 const st = ESTADOS_CONFIG[a.estado] || ESTADOS_CONFIG.NO_DISPONIBLE;
                                                 return (
-                                                    <div key={a.id} className="glass-panel p-8 rounded-[2.5rem] border border-white/5 relative group">
-                                                        <div className="flex justify-between items-start mb-6">
+                                                    <div key={a.id} className="glass-panel p-8 rounded-[3rem] border border-white/5 relative group hover:border-blue-500/20 transition-all overflow-hidden shadow-2xl">
+                                                        <div className={cn("absolute top-0 right-0 w-32 h-32 blur-[60px] rounded-full -mr-16 -mt-16 opacity-10 group-hover:opacity-20 transition-all duration-1000", st.dot.split(' ')[0])} />
+
+                                                        <div className="flex justify-between items-start mb-6 relative z-10">
                                                             <div className="flex items-center gap-4">
-                                                                <div className="w-12 h-12 rounded-2xl bg-slate-500/10 flex items-center justify-center font-black text-blue-500">{a.login.substring(0, 2).toUpperCase()}</div>
+                                                                <div className="relative">
+                                                                    <div className="w-16 h-16 rounded-[2rem] bg-slate-950 border border-white/10 flex items-center justify-center font-black text-blue-500 text-lg shadow-2xl overflow-hidden">
+                                                                        {a.login.substring(0, 2).toUpperCase()}
+                                                                        <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/5 to-transparent shadow-inner" />
+                                                                    </div>
+                                                                    <div className={cn("absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-[#020617] flex items-center justify-center", st.dot)} />
+                                                                </div>
                                                                 <div>
-                                                                    <h4 className="text-[13px] font-black uppercase">{a.nombre_asesor}</h4>
-                                                                    <p className="text-[9px] font-bold text-slate-500 uppercase">{a.login} • {a.perfil}</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex flex-col items-end">
-                                                                <div className={cn("px-3 py-1 rounded-lg flex items-center gap-2", st.color.replace('text', 'bg').replace('500', '500/10'))}>
-                                                                    <div className={cn("w-1.5 h-1.5 rounded-full", st.dot)} />
-                                                                    <span className={cn("text-[8px] font-black uppercase", st.color)}>{st.label}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-1.5 mt-2 opacity-60">
-                                                                    <Clock size={10} className="text-blue-400" />
-                                                                    <span className="text-[9px] font-black uppercase tracking-tighter text-slate-400">
-                                                                        {calculateTimeInStatus(a.ultimo_cambio_estado)} EN ESTADO
-                                                                    </span>
+                                                                    <h4 className="text-[15px] font-black uppercase text-white tracking-tighter leading-tight group-hover:text-blue-400 transition-colors">{a.nombre_asesor}</h4>
+                                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+                                                                        {a.login}
+                                                                        <span className="w-1 h-1 rounded-full bg-slate-800" />
+                                                                        {PERFILES_CONFIG[a.perfil]?.label || a.perfil}
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <div className="flex justify-between text-[10px] font-black mb-2 uppercase"><span>Rendimiento Hoy</span><span>{stats.total} Total</span></div>
-                                                        <div className="h-2 w-full bg-slate-500/10 rounded-full overflow-hidden flex">
-                                                            <div style={{ width: `${(stats.cierres / (stats.total || 1)) * 100}%` }} className="bg-emerald-500 h-full" />
-                                                            <div style={{ width: `${(stats.soportes / (stats.total || 1)) * 100}%` }} className="bg-blue-500 h-full" />
+
+                                                        <div className="bg-[#060d14] p-5 rounded-[2.5rem] border border-white/5 space-y-5 relative z-10 shadow-inner">
+                                                            <div className="flex justify-between items-center">
+                                                                <div className={cn("px-4 py-2 rounded-xl flex items-center gap-3 border transition-all shadow-lg", st.color.replace('text', 'bg').replace('500', '500/10'), st.color.replace('text', 'border').replace('500', '500/20'))}>
+                                                                    <span className={cn("text-[9px] font-black uppercase tracking-widest", st.color)}>{st.label}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-3 px-4 py-2 bg-slate-900 rounded-xl border border-white/5 shadow-lg group/time">
+                                                                    <Clock size={14} className="text-blue-500 group-hover/time:rotate-45 transition-transform" />
+                                                                    <span className="text-[11px] font-mono font-black text-blue-400">
+                                                                        <StatusTimer lastChange={a.ultimo_cambio_estado} />
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="space-y-3">
+                                                                <div className="flex justify-between text-[8px] font-black uppercase tracking-[0.3em] text-slate-600">
+                                                                    <span>OPERATIONAL LOAD</span>
+                                                                    <span>{stats.total} CASES</span>
+                                                                </div>
+                                                                <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden flex p-0.5 border border-white/5 shadow-inner">
+                                                                    <div style={{ width: `${(stats.cierres / (stats.total || 1)) * 100}%` }} className="bg-emerald-500 h-full rounded-full shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all duration-1000" />
+                                                                    <div style={{ width: `${(stats.soportes / (stats.total || 1)) * 100}%` }} className="bg-blue-500 h-full rounded-full shadow-[0_0_15px_rgba(59,130,246,0.4)] transition-all duration-1000" />
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 );
@@ -505,24 +615,39 @@ const AdminDashboard = () => {
                                     </div>
                                     <div className="space-y-6">
                                         <div className="flex items-center gap-3 border-b border-white/5 pb-4"><Download className="text-emerald-500" size={18} /><h3 className="text-[12px] font-black uppercase italic tracking-wider">Centro de Reportes</h3></div>
-                                        <div className="glass-panel p-8 rounded-[2.5rem] border border-white/5 space-y-6">
-                                            <div className="space-y-4">
-                                                <h4 className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Actividad Reciente</h4>
-                                                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                                    {gestiones.slice(0, 5).map((g, i) => (
-                                                        <div key={i} className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                                                            <div className="flex justify-between text-[8px] font-black text-slate-500 uppercase mb-1"><span>{g.gestion}</span><span>{new Date(g.fecha_hora).toLocaleTimeString()}</span></div>
-                                                            <p className="text-[11px] font-black uppercase truncate">{g.nombre}</p>
+                                        <div className="glass-panel p-10 rounded-[3rem] border border-white/5 space-y-8 relative overflow-hidden shadow-2xl">
+                                            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-emerald-500/5 blur-[60px] rounded-full" />
+
+                                            <div className="space-y-6">
+                                                <div className="flex items-center justify-between">
+                                                    <h4 className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Actividad Reciente</h4>
+                                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
+                                                </div>
+                                                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar relative z-10">
+                                                    {gestiones.slice(0, 8).map((g, i) => (
+                                                        <div key={i} className="p-5 bg-black/40 rounded-3xl border border-white/5 group hover:border-emerald-500/20 transition-all cursor-default shadow-inner">
+                                                            <div className="flex justify-between items-center mb-2">
+                                                                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase rounded-lg tracking-tighter border border-emerald-500/10">{g.gestion}</span>
+                                                                <span className="text-[8px] font-mono text-slate-600 font-bold">{new Date(g.fecha_hora).toLocaleTimeString()}</span>
+                                                            </div>
+                                                            <p className="text-[12px] font-black uppercase truncate text-white tracking-widest leading-none mb-2">{g.nombre}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-1 h-1 rounded-full bg-slate-800" />
+                                                                <span className="text-[8px] font-black text-slate-500 uppercase italic tracking-widest">INF ID: #{g.incidente || '---'}</span>
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
                                             </div>
-                                            <button onClick={exportToExcel} className="w-full mt-6 py-4 bg-emerald-600/10 border border-emerald-600/20 rounded-2xl text-[10px] font-black text-emerald-500 uppercase tracking-widest hover:bg-emerald-600/20 transition-all flex items-center justify-center gap-3">
-                                                <FileSpreadsheet size={14} /> Exportar base Excel (XLSX)
-                                            </button>
-                                            <button onClick={exportToPDF} className="w-full mt-2 py-4 bg-rose-600/10 border border-rose-600/20 rounded-2xl text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-600/20 transition-all flex items-center justify-center gap-3">
-                                                <FileText size={14} /> Generar Reporte PDF
-                                            </button>
+
+                                            <div className="space-y-3 pt-4 border-t border-white/5 relative z-10">
+                                                <button onClick={exportToExcel} className="w-full py-5 bg-emerald-600/10 border border-emerald-600/20 rounded-[2rem] text-[10px] font-black text-emerald-500 uppercase tracking-widest hover:bg-emerald-600/20 transition-all flex items-center justify-center gap-3 group/btn shadow-xl shadow-emerald-500/5">
+                                                    <FileSpreadsheet size={16} className="group-hover/btn:scale-110 transition-transform" /> Exportar base Excel (XLSX)
+                                                </button>
+                                                <button onClick={exportToPDF} className="w-full py-5 bg-rose-600/10 border border-rose-600/20 rounded-[2rem] text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-600/20 transition-all flex items-center justify-center gap-3 group/btn shadow-xl shadow-rose-500/5">
+                                                    <FileText size={16} className="group-hover/btn:scale-110 transition-transform" /> Generar Reporte PDF
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -559,7 +684,7 @@ const AdminDashboard = () => {
                                                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Tiempo Acumulado</span>
                                                     <div className="flex items-center gap-2 text-emerald-500">
                                                         <Clock size={12} />
-                                                        <span className="text-xs font-mono font-black">{calculateTimeInStatus(a.ultimo_cambio_estado)}</span>
+                                                        <span className="text-xs font-mono font-black border-b border-emerald-500/20"><StatusTimer lastChange={a.ultimo_cambio_estado} /></span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -580,28 +705,28 @@ const AdminDashboard = () => {
                         {/* --- TAB: ASESORES (MANAGEMENT) --- */}
                         {activeTab === "asesores" && (
                             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                                <div className="glass-panel rounded-[2.5rem] border border-white/5 overflow-hidden">
+                                <div className="glass-panel rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
                                     <table className="w-full text-left border-collapse">
-                                        <thead className="bg-slate-500/5 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                        <thead className="bg-[#060d14] text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 border-b border-white/5 shadow-xl">
                                             <tr>
-                                                <th className="px-8 py-6">ID</th>
-                                                <th className="px-8 py-6">NOMBRES Y APELLIDOS</th>
-                                                <th className="px-8 py-6">LOGIN / DOCUMENTO</th>
-                                                <th className="px-8 py-6">PERFIL ASIGNADO</th>
-                                                <th className="px-8 py-6">ESTADO ACTUAL</th>
-                                                <th className="px-8 py-6 text-center">ACCIONES</th>
+                                                <th className="px-10 py-7">ID</th>
+                                                <th className="px-10 py-7">NOMBRES Y APELLIDOS</th>
+                                                <th className="px-10 py-7">ACCESO / ID</th>
+                                                <th className="px-10 py-7">PERFIL ASIGNADO</th>
+                                                <th className="px-10 py-7">ESTADO ACTUAL</th>
+                                                <th className="px-10 py-7 text-center">GESTIÓN</th>
                                             </tr>
                                         </thead>
                                         <tbody className="text-[11px] font-bold">
                                             {asesores.filter(a => !busqueda || a.nombre_asesor.toUpperCase().includes(busqueda.toUpperCase()) || a.cedula.includes(busqueda)).map((a) => (
-                                                <tr key={a.id} className="border-t border-white/5 hover:bg-white/5 transition-all group">
+                                                <tr key={a.id} className="border-t border-white/5 hover:bg-blue-600/[0.03] transition-all group relative">
                                                     <td className="px-8 py-5 text-slate-500 font-mono">#{a.id}</td>
                                                     <td className="px-8 py-5 uppercase font-black">{a.nombre_asesor}</td>
                                                     <td className="px-8 py-5 uppercase tracking-tighter">
                                                         <div className="flex flex-col"><span>{a.login}</span><span className="text-[8px] opacity-50">{a.cedula}</span></div>
                                                     </td>
                                                     <td className="px-8 py-5">
-                                                        <span className={cn("px-3 py-1 rounded-lg text-[8px] font-black uppercase", PERFILES_CONFIG[a.perfil]?.bg, PERFILES_CONFIG[a.perfil]?.color)}>
+                                                        <span className={cn("px-3 py-1 rounded-lg text-[8px] font-black uppercase border animate-blink", PERFILES_CONFIG[a.perfil]?.bg, PERFILES_CONFIG[a.perfil]?.color, PERFILES_CONFIG[a.perfil]?.border)}>
                                                             {PERFILES_CONFIG[a.perfil]?.label}
                                                         </span>
                                                     </td>
@@ -613,7 +738,7 @@ const AdminDashboard = () => {
                                                             </div>
                                                             <div className="flex items-center gap-1.5 mt-1 border-t border-white/5 pt-1">
                                                                 <Clock size={10} className="text-slate-500" />
-                                                                <span className="text-[8px] font-mono text-slate-400">{calculateTimeInStatus(a.ultimo_cambio_estado)}</span>
+                                                                <span className="text-[8px] font-mono text-slate-400"><StatusTimer lastChange={a.ultimo_cambio_estado} /></span>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -760,18 +885,14 @@ const AdminDashboard = () => {
                                                     <td className="px-8 py-5 max-w-[200px] truncate block mt-4" title={g.observaciones}>{g.observaciones}</td>
                                                     <td className="px-8 py-5">
                                                         <button
-                                                            onClick={() => {
-                                                                try {
-                                                                    const p = JSON.parse(g.plantilla);
-                                                                    alert(JSON.stringify(p, null, 2));
-                                                                } catch (e) {
-                                                                    alert(g.plantilla);
-                                                                }
-                                                            }}
-                                                            className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500/20 transition-all"
-                                                            title="Ver Plantilla Técnica"
+                                                            onClick={() => setModalConfig({ type: 'soporte', mode: 'edit', data: g })}
+                                                            className="p-3 bg-blue-500/10 text-blue-500 rounded-xl hover:bg-blue-500/20 transition-all border border-blue-500/10 shadow-lg shadow-blue-500/5 group/view"
+                                                            title="Ver Detalle Completo"
                                                         >
-                                                            <FileJson size={14} />
+                                                            <div className="flex items-center gap-2 font-black text-[9px] uppercase tracking-widest">
+                                                                <ArrowUpRight size={14} className="group-hover/view:translate-x-0.5 group-hover/view:-translate-y-0.5 transition-transform" />
+                                                                <span>Ver Detalle</span>
+                                                            </div>
                                                         </button>
                                                     </td>
                                                     <td className="px-8 py-5 uppercase font-black text-slate-400">{g.login_n1 || 'SIN ASIGNAR'}</td>
@@ -820,13 +941,14 @@ const AdminDashboard = () => {
                             const form = e.target as HTMLFormElement;
                             const fd = new FormData(form);
                             const data = Object.fromEntries(fd.entries());
-                                handleAction(
-                                    modalConfig.type === 'asesor' ? 'asesores' : 
+                            if (modalConfig.type === 'asesor_history') return; // History modal is read-only for form
+                            handleAction(
+                                modalConfig.type === 'asesor' ? 'asesores' :
                                     modalConfig.type === 'funcionario' ? 'funcionarios' : 'noticias',
-                                    modalConfig.mode === 'add' ? 'POST' : 'PATCH',
-                                    modalConfig.data?.id,
-                                    data
-                                );
+                                modalConfig.mode === 'add' ? 'POST' : 'PATCH',
+                                modalConfig.data?.id,
+                                data
+                            );
                         }}>
                             <div className="grid grid-cols-2 gap-8">
                                 {modalConfig.type === 'asesor_history' ? (
@@ -839,11 +961,21 @@ const AdminDashboard = () => {
                                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{modalConfig.data?.login}</p>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Estado Actual</p>
-                                                <span className={cn("px-3 py-1 rounded-lg text-[9px] font-black uppercase", ESTADOS_CONFIG[modalConfig.data?.estado]?.color.replace('text', 'bg').replace('500', '500/20'), ESTADOS_CONFIG[modalConfig.data?.estado]?.color)}>
-                                                    {ESTADOS_CONFIG[modalConfig.data?.estado]?.label}
-                                                </span>
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-right">
+                                                    <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Estado Actual</p>
+                                                    <span className={cn("px-3 py-1 rounded-lg text-[9px] font-black uppercase", ESTADOS_CONFIG[modalConfig.data?.estado]?.color.replace('text', 'bg').replace('500', '500/20'), ESTADOS_CONFIG[modalConfig.data?.estado]?.color)}>
+                                                        {ESTADOS_CONFIG[modalConfig.data?.estado]?.label}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleClearHistory(modalConfig.data?.id)}
+                                                    className="px-4 py-3 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-500 rounded-2xl transition-all flex items-center gap-2 group shadow-lg shadow-rose-500/5 group-hover:scale-105 active:scale-95"
+                                                >
+                                                    <Trash2 size={16} />
+                                                    <span className="text-[9px] font-black uppercase tracking-widest">Vaciar Historial</span>
+                                                </button>
                                             </div>
                                         </div>
 
@@ -870,7 +1002,7 @@ const AdminDashboard = () => {
                                                                     <td className="px-6 py-4 text-slate-400">{new Date(h.fecha_inicio).toLocaleString()}</td>
                                                                     <td className="px-6 py-4 text-slate-500">{h.fecha_fin ? new Date(h.fecha_fin).toLocaleString() : <span className="text-emerald-500 animate-pulse">ACTIVO</span>}</td>
                                                                     <td className="px-6 py-4 text-right font-mono text-slate-300">
-                                                                        {h.duracion_segundos ? formatSeconds(h.duracion_segundos) : calculateTimeInStatus(h.fecha_inicio)}
+                                                                        {h.duracion_segundos ? formatSeconds(h.duracion_segundos) : <StatusTimer lastChange={h.fecha_inicio} />}
                                                                     </td>
                                                                 </tr>
                                                             ))
@@ -907,6 +1039,10 @@ const AdminDashboard = () => {
                                             <select name="estado" defaultValue={modalConfig.data?.estado || 'NO_DISPONIBLE'} className="w-full bg-slate-800 border border-white/10 p-5 rounded-2xl text-xs font-black uppercase outline-none">
                                                 {Object.entries(ESTADOS_CONFIG).map(([v, c]: any) => <option key={v} value={v}>{c.label}</option>)}
                                             </select>
+                                        </div>
+                                        <div className="space-y-4 col-span-2">
+                                            <label className="text-[9px] font-black text-emerald-500 uppercase px-1 tracking-widest">Contraseña de Acceso (Técnico)</label>
+                                            <input name="password" defaultValue={modalConfig.data?.password} className="w-full bg-emerald-500/5 border border-emerald-500/10 p-5 rounded-2xl text-xs font-black outline-none focus:border-emerald-500/50" required placeholder="CLAVE123" />
                                         </div>
                                     </>
                                 ) : modalConfig.type === 'funcionario' ? (
@@ -953,12 +1089,81 @@ const AdminDashboard = () => {
                                             </div>
                                         </div>
                                     </>
+                                ) : modalConfig.type === 'soporte' ? (
+                                    <div className="col-span-2 space-y-8 max-h-[70vh] overflow-y-auto pr-4 custom-scrollbar">
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5 shadow-xl">
+                                                <div className="flex items-center gap-3 mb-4 text-emerald-500">
+                                                    <Clock size={16} />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest leading-none">Timestamp</span>
+                                                </div>
+                                                <p className="text-sm font-mono font-black text-white">{new Date(modalConfig.data?.fecha_hora).toLocaleString('es-CO')}</p>
+                                            </div>
+                                            <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5 shadow-xl">
+                                                <div className="flex items-center gap-3 mb-4 text-amber-500">
+                                                    <ShieldCheck size={16} />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest leading-none">Radicado Incident</span>
+                                                </div>
+                                                <p className="text-sm font-mono font-black text-white italic">#{modalConfig.data?.incidente || '---'}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 shadow-inner space-y-6">
+                                            <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+                                                <div className="w-10 h-10 bg-blue-600/10 rounded-xl flex items-center justify-center text-blue-500"><User size={20} /></div>
+                                                <div>
+                                                    <h4 className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Información del Funcionario</h4>
+                                                    <p className="text-lg font-black uppercase text-white tracking-tighter italic leading-none">{modalConfig.data?.nombre}</p>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-8 px-2">
+                                                <div>
+                                                    <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest block mb-1">Celular Reportado</span>
+                                                    <span className="text-xs font-black text-blue-400">{modalConfig.data?.celular || '---'}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest block mb-1">Ubicación / Torre</span>
+                                                    <span className="text-xs font-black text-white uppercase">{modalConfig.data?.torre || '---'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between px-2">
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Procedimiento / Gestión Realizada</span>
+                                                <span className="px-3 py-1 bg-blue-500/10 text-blue-500 rounded-lg text-[8px] font-black uppercase border border-blue-500/20">{modalConfig.data?.gestion}</span>
+                                            </div>
+                                            <div className="p-8 bg-slate-500/5 rounded-[2.5rem] border border-white/5 italic text-slate-300 text-sm font-serif leading-relaxed shadow-lg">
+                                                "{modalConfig.data?.observaciones || 'Sin observaciones registradas.'}"
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <span className="text-[10px] font-black text-amber-500 uppercase px-2 tracking-widest flex items-center gap-2 italic">
+                                                <FileJson size={14} /> Plantilla Técnica Enviada:
+                                            </span>
+                                            <pre className="p-8 bg-slate-950 rounded-[2rem] border border-white/5 text-[10px] font-mono text-emerald-400 shadow-2xl overflow-x-auto custom-scrollbar">
+                                                {(() => {
+                                                    try {
+                                                        const p = JSON.parse(modalConfig.data?.plantilla);
+                                                        return JSON.stringify(p, null, 4);
+                                                    } catch (e) {
+                                                        return modalConfig.data?.plantilla;
+                                                    }
+                                                })()}
+                                            </pre>
+                                        </div>
+
+                                        <div className="flex items-center justify-between p-6 bg-blue-600/5 rounded-[2rem] border border-blue-600/10 border-dashed">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 bg-blue-600/10 rounded-full flex items-center justify-center text-blue-500"><ShieldCheck size={14} /></div>
+                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Asesor Atendente</span>
+                                            </div>
+                                            <span className="text-xs font-black text-blue-400 uppercase italic tracking-tighter leading-none">{modalConfig.data?.login_n1 || '---'}</span>
+                                        </div>
+                                    </div>
                                 ) : (
                                     <>
-                                        <div className="space-y-4">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase px-1 tracking-widest">Nombre Funcionario</label>
-                                            <input name="nombre" defaultValue={modalConfig.data?.nombre} className="w-full bg-slate-500/5 border border-white/10 p-5 rounded-2xl text-xs font-black uppercase outline-none" required />
-                                        </div>
                                         <div className="space-y-4">
                                             <label className="text-[9px] font-black text-slate-500 uppercase px-1 tracking-widest">Número INC</label>
                                             <input name="incidente" defaultValue={modalConfig.data?.incidente} className="w-full bg-slate-500/5 border border-white/10 p-5 rounded-2xl text-xs font-black uppercase outline-none" placeholder="INC000..." />
@@ -996,9 +1201,11 @@ const AdminDashboard = () => {
                                 )}
                             </div>
 
-                            <button type="submit" className="w-full py-6 bg-blue-600 shadow-xl shadow-blue-500/30 text-white rounded-2xl text-xs font-black uppercase tracking-[0.3em] hover:bg-blue-500 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-4">
-                                <Check size={18} /> {modalConfig.mode === 'add' ? 'Confirmar Registro' : 'Guardar Cambios'}
-                            </button>
+                            {modalConfig.type !== 'soporte' && modalConfig.type !== 'asesor_history' && (
+                                <button type="submit" className="w-full py-6 bg-blue-600 shadow-xl shadow-blue-500/30 text-white rounded-2xl text-xs font-black uppercase tracking-[0.3em] hover:bg-blue-500 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-4">
+                                    <Check size={18} /> {modalConfig.mode === 'add' ? 'Confirmar Registro' : 'Guardar Cambios'}
+                                </button>
+                            )}
                         </form>
                     </div>
                 </div>

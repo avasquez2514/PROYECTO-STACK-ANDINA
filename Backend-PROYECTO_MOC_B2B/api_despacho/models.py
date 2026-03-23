@@ -26,7 +26,7 @@ class Soporte(models.Model):
     tipo_servicio = models.CharField(max_length=255)
     estado = models.CharField(max_length=255)
     observaciones_ultima = models.TextField()
-    evidencias = models.TextField(null=True, blank=True) # JSON list of base64 strings
+    evidencias = models.TextField(null=True, blank=True) # Mantener por compatibilidad, pero usar SoporteEvidencia
     prioridad = models.BooleanField(default=False)
 
     # Campos para el cronómetro
@@ -65,6 +65,14 @@ class Soporte(models.Model):
 
     def __str__(self):
         return f"{self.nombre} - {self.gestion}"
+
+class SoporteEvidencia(models.Model):
+    soporte = models.ForeignKey(Soporte, on_delete=models.CASCADE, related_name='evidencias_files')
+    archivo = models.FileField(upload_to='evidencias/')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "soporte_evidencias"
 
 
 # 🔹 Nueva tabla para asesores
@@ -169,7 +177,7 @@ class ChatMessage(models.Model):
     soporte = models.ForeignKey(Soporte, on_delete=models.CASCADE, related_name='mensajes')
     remitente = models.CharField(max_length=255)
     mensaje = models.TextField()
-    imagen = models.TextField(null=True, blank=True) # Base64 string para imágenes
+    imagen = models.FileField(upload_to='chat_files/', null=True, blank=True) 
     fecha_hora = models.DateTimeField(auto_now_add=True)
 
     class Meta:
