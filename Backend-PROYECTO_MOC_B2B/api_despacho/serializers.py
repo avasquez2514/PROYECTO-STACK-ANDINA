@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Soporte, AsesorSoporte, Funcionario, HistorialEstadoAsesor, ChatMessage, Noticia, SoporteEvidencia
+from .models import Soporte, AsesorSoporte, Funcionario, HistorialEstadoAsesor, ChatMessage, Noticia, SoporteEvidencia, AuditLog
 
 
 class SoporteEvidenciaSerializer(serializers.ModelSerializer):
@@ -53,4 +53,9 @@ class ChatMessageSerializer(serializers.ModelSerializer):
 class NoticiaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Noticia
+        fields = '__all__'
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AuditLog
         fields = '__all__'

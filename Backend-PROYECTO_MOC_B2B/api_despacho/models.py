@@ -200,3 +200,15 @@ class Noticia(models.Model):
 
     def __str__(self):
         return self.contenido[:50]
+
+class AuditLog(models.Model):
+    usuario = models.CharField(max_length=255)
+    accion = models.TextField()
+    fecha_hora = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'audit_logs'
+        ordering = ['-fecha_hora']
+
+    def __str__(self):
+        return f'{self.usuario} - {self.accion} ({self.fecha_hora})'

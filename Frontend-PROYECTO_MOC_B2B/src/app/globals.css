@@ -11,7 +11,7 @@
 @layer base {
   :root {
     /* Tema Phoenix Premium (Deep Obsidian / Neon Accents) */
-    --background: #060d14;
+    --background: #020617;
     --foreground: #ffffff;
     --primary: #00e5a0;
     --primary-glow: rgba(0, 229, 160, 0.2);
@@ -19,9 +19,9 @@
     --secondary-glow: rgba(0, 184, 229, 0.15);
     --accent-yellow: #e5b800;
     --accent-red: #e5003d;
-    --card-bg: rgba(13, 25, 38, 0.6);
-    --border-color: rgba(0, 229, 160, 0.1);
-    --sidebar-bg: #04090e;
+    --card-bg: rgba(0, 0, 0, 0.7);
+    --border-color: rgba(255, 255, 255, 0.05);
+    --sidebar-bg: #000000;
   }
 
   .light {
@@ -97,9 +97,9 @@ body {
  * Efectos de paneles traslúcidos con desenfoque de fondo
  */
 .glass-panel {
-  background: var(--card-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 }
@@ -225,8 +225,13 @@ body {
 
 /* Marquee Animation */
 @keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .animate-marquee {
@@ -242,15 +247,22 @@ body {
 
 /* Glass Card for News */
 .news-glass {
-  background: rgba(13, 25, 38, 0.4);
+  background: rgba(5, 9, 14, 0.4);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(251, 191, 36, 0.1);
   box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .animate-blink {
@@ -258,11 +270,33 @@ body {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-  20%, 40%, 60%, 80% { transform: translateX(4px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-4px);
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(4px);
+  }
 }
 
 .animate-shake {
-  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+  animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+}
+
+/* Custom Overrides */
+.text-slate-800 {
+  color: oklch(0 0 0) !important;
 }

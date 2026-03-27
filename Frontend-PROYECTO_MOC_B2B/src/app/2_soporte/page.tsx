@@ -9,6 +9,9 @@ import {
 import ChatWindow from "../components/ChatWindow";
 import LiveTimer from "../components/LiveTimer";
 import NoticiaPanel from "../components/NoticiaPanel";
+import Skeleton from "../components/Skeleton";
+import FullscreenButton from "../components/FullscreenButton";
+import { toast } from "sonner";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
@@ -40,6 +43,7 @@ export default function SoportePage() {
   const [hasMounted, setHasMounted] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [loggedUser, setLoggedUser] = useState("AVASQUEZ"); // Mock or from context
+  const [loading, setLoading] = useState(true);
 
   // Chat State
   const [activeChatSoporteId, setActiveChatSoporteId] = useState<number | null>(null);
@@ -61,12 +65,16 @@ export default function SoportePage() {
     cargarDatos();
     cargarAsesores();
     cargarNoticia();
-    const interval = setInterval(() => {
-      cargarDatos();
-      cargarAsesores();
-      cargarNoticia();
-    }, 3000);
-    return () => clearInterval(interval);
+
+    const socket = new WebSocket("ws://127.0.0.1:8000/ws/updates/");
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.model === 'soporte') cargarDatos();
+      if (data.model === 'asesor') cargarAsesores();
+      if (data.model === 'noticia') cargarNoticia();
+    };
+
+    return () => socket.close();
   }, []);
 
   const cargarDatos = async () => {
@@ -74,7 +82,11 @@ export default function SoportePage() {
       const res = await fetch("http://127.0.0.1:8000/api/soporte/");
       const json = await res.json();
       setDatos(json.sort((a: any, b: any) => a.id - b.id));
-    } catch (e) { console.error(e); }
+      setLoading(false);
+    } catch (e) {
+      console.error(e);
+      setLoading(false);
+    }
   };
 
   const cargarAsesores = async () => {
@@ -99,9 +111,8 @@ export default function SoportePage() {
       await fetch(`http://127.0.0.1:8000/api/soporte/${id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [field]: value }),
+        body: JSON.stringify({ [field]: value, admin_user: loggedUser }),
       });
-      cargarDatos();
     } catch (e) { console.error(e); }
   };
 
@@ -110,9 +121,8 @@ export default function SoportePage() {
       await fetch(`http://127.0.0.1:8000/api/asesores/${id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ estado: nuevoEstado }),
+        body: JSON.stringify({ estado: nuevoEstado, admin_user: loggedUser }),
       });
-      cargarAsesores();
     } catch (e) { console.error(e); }
   };
 
@@ -202,7 +212,7 @@ export default function SoportePage() {
         {/* Sidebar - Advisor Status Section */}
         <aside className="w-64 lg:w-80 shrink-0 border-r flex flex-col transition-all duration-500 border-[#152233] bg-[#0b1621]/80 backdrop-blur-xl shadow-[10px_0_30px_rgba(0,0,0,0.5)]">
           <div className="p-4 lg:p-8 border-b flex items-center gap-4 border-white/5">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg hud-corners transition-colors bg-[#0b1621] border border-[#152233]">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg hud-corners transition-colors bg-[#0b1618] border border-[#152233]">
               <Zap className="text-[#00e5a0]" size={24} fill="currentColor" />
             </div>
             <div>
@@ -325,7 +335,7 @@ export default function SoportePage() {
             </div>
 
             <div className="flex items-center gap-4">
-              {/* Theme toggle removed */}
+              <FullscreenButton />
             </div>
 
           </header>
@@ -391,203 +401,209 @@ export default function SoportePage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#152233]/40">
-                    {datosFiltrados.map((d) => (
-                      <tr
-                        key={d.id}
-                        className={cn(
-                          "transition-all group border-l-4 border-transparent hover:border-[#00e5a0]/60 hover:bg-[#060d14]/60",
-                          d.prioridad ? "bg-rose-500/10 border-l-rose-500" : "",
-                          openDropdownId?.id === d.id ? "relative z-50 bg-[#060d14] shadow-[0_0_30px_rgba(0,0,0,0.9)]" : "relative z-0"
-                        )}
-                      >
-                        <td className="px-4 py-3">
-                          <p className="text-[11px] font-bold tracking-tight text-slate-300">{formatearFecha(d.fecha_hora).split('|')[1]}</p>
-                          <p className="text-[9px] text-slate-400 font-medium">{formatearFecha(d.fecha_hora).split('|')[0]}</p>
-                        </td>
-                        <td className="px-2 py-3 text-center">
-                          <span className={cn(
-                            "text-[10px] font-black px-2.5 py-1 rounded-lg transition-all",
-                            d.en_sitio
-                              ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                              : "bg-slate-100/50 text-slate-400 border border-slate-200"
-                          )}>
-                            {d.en_sitio ? "SI" : "NO"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-[11px] font-black uppercase tracking-tight text-white">{d.nombre}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-[11px] font-bold text-slate-400">{d.celular || "315 --"}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-[11px] font-bold uppercase tracking-tighter truncate max-w-[150px] inline-block text-white">{d.torre}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2.5 py-1 bg-[#0b1621] text-white rounded-lg font-mono font-black text-[10px] border border-white/20">
-                              {d.incidente || "INC-0000"}
-                            </span>
-                            <button
-                              onClick={(e) => {
-                                navigator.clipboard.writeText(d.incidente || "INC-0000");
-                                const btn = e.currentTarget;
-                                const originalHtml = btn.innerHTML;
-                                btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00e5a0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                                setTimeout(() => {
-                                  btn.innerHTML = originalHtml;
-                                }, 1500);
-                              }}
-                              className="p-1.5 hover:bg-[#00e5a0]/20 hover:text-[#00e5a0] text-[#608096] rounded-md transition-all border border-transparent hover:border-[#00e5a0]/30 shadow-sm"
-                              title="Copiar Incidente"
-                            >
-                              <Copy size={12} strokeWidth={2.5} />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={cn(
-                            "px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight",
-                            d.gestion === 'AUSENCIA' || d.gestion === 'ASESORIA' ? 'bg-amber-500/10 text-amber-600' :
-                              d.gestion === 'DIRECTO' ? 'bg-orange-500/10 text-orange-600' :
-                                'bg-emerald-500/10 text-emerald-600'
-                          )}>
-                            {d.gestion}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="text-[10px] font-medium line-clamp-2 max-w-[300px] text-slate-400 group-hover:text-white transition-colors" title={decodificarObservaciones(d.observaciones)}>
-                            {decodificarObservaciones(d.observaciones)}
-                          </p>
-                        </td>
-                        <td className="px-2 py-3 text-center">
-                          <button
-                            onClick={() => {
-                              setActiveChatSoporteId(d.id);
-                              setActiveChatIncidente(d.incidente);
-                            }}
-                            className="p-2 border rounded-xl transition-all relative flex items-center justify-center mx-auto hover:bg-[#00e5a0]/5 bg-[#060d14] border-[#152233] text-[#608096]"
-                          >
-                            <MessageSquare size={14} strokeWidth={2} />
-                            {d.chat_visto_soporte === false && (
-                              <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center">
-                                <span className="absolute inline-flex h-full w-full rounded-full bg-[#00e5a0] opacity-50 animate-ping shadow-[0_0_15px_#00e5a0]"></span>
-                                <span className="relative inline-flex rounded-full h-full w-full bg-[#00e5a0] border-2 border-[#060d14] shadow-[0_0_10px_rgba(0,229,160,0.8)] items-center justify-center">
-                                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse shadow-sm"></span>
-                                </span>
-                              </span>
-                            )}
-                          </button>
-                        </td>
-                        <td className="px-2 py-3 text-center">
-                          <button
-                            onClick={() => {
-                              const textoFormateado = formatearPlantilla(d.plantilla || "{}");
-                              let evList: string[] = [];
-                              if (d.evidencias_files && (d.evidencias_files as any[]).length > 0) {
-                                evList = (d.evidencias_files as any[]).map(f => `http://127.0.0.1:8000${f.archivo}`);
-                              } else {
-                                try { if (d.evidencias) evList = JSON.parse(d.evidencias); } catch (e) { }
-                              }
-                              setModalConfig({ id: d.id, text: textoFormateado, title: "PLANTILLA TÉCNICA", evidencias: evList });
-                            }}
-                            className="p-2 border rounded-xl transition-all flex items-center justify-center mx-auto hover:bg-[#00b8e5]/5 bg-[#060d14] border-[#152233] text-[#608096]"
-                          >
-                            <ClipboardList size={14} strokeWidth={2} />
-                          </button>
-                        </td>
-                        <td className="px-2 py-3 text-center">
-                          <div className={cn("relative flex justify-center", openDropdownId?.id === d.id && openDropdownId?.type === 'login' ? "z-50" : "z-0")}>
-                            <button
-                              onClick={() => setOpenDropdownId(openDropdownId?.id === d.id && openDropdownId?.type === 'login' ? null : { id: d.id, type: 'login' })}
-                              className="w-32 border text-[9px] font-black uppercase py-2 px-3 rounded-xl flex items-center justify-between transition-all active:scale-95 bg-[#060d14] border-[#152233] text-white hover:border-[#00e5a0]/30"
-                            >
-                              <span className="truncate pr-2">{d.login_n1 === "POR_ASIGNAR" ? "--" : d.login_n1}</span>
-                              <ChevronDown size={10} className={cn("text-white/40 transition-transform", openDropdownId?.id === d.id && openDropdownId?.type === 'login' && "rotate-180")} />
-                            </button>
-
-                            {openDropdownId?.id === d.id && openDropdownId?.type === 'login' && (
-                              <>
-                                <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownId(null)} />
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-40 z-50 rounded-2xl border border-[#152233] bg-[#0b1621]/95 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-200">
-                                  <button
-                                    onClick={() => { actualizarSoporte(d.id, "login_n1", "POR_ASIGNAR"); setOpenDropdownId(null); }}
-                                    className="w-full px-5 py-3 text-[9px] font-bold text-left hover:bg-rose-500/10 hover:text-rose-500 transition-colors border-b border-white/5 text-white/50"
-                                  >
-                                    -- QUITAR ASIGNACIÓN --
-                                  </button>
-                                  <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                                    {asesoresSoporte.map(a => (
-                                      <button
-                                        key={a.id}
-                                        onClick={() => {
-                                          actualizarSoporte(d.id, "login_n1", a.login);
-                                          setOpenDropdownId(null);
-                                        }}
-                                        className="w-full px-5 py-3 text-[9px] font-black text-left hover:bg-[#00e5a0]/10 hover:text-[#00e5a0] transition-colors border-b border-white/5 last:border-0 text-white/80 uppercase"
-                                      >
-                                        {a.login}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-8 py-3 text-center relative">
-                          <div
-                            className={cn(
-                              "w-28 border text-[9px] font-black rounded-xl py-1.5 px-3 flex items-center justify-between mx-auto opacity-80 cursor-pointer hover:opacity-100 transition-all",
-                              d.estado === 'Resuelto' || d.estado === 'ACTIVO' ? 'bg-emerald-600/10 text-emerald-600 border-emerald-600/20 hover:bg-emerald-600/20' :
-                                d.estado === 'En gestión' || d.estado === 'PENDIENTE' ? 'bg-[#00b8e5]/10 text-[#00b8e5] border-[#00b8e5]/20 hover:bg-[#00b8e5]/20' :
-                                  d.estado === 'Enrutado' ? 'bg-amber-400/10 text-amber-400 border-amber-400/20 hover:bg-amber-400/20' :
-                                    d.estado === 'Mal Escalado' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500/20' :
-                                      "bg-[#060d14] text-white border-[#152233]"
-                            )}
-                            onClick={() => setOpenDropdownId(openDropdownId?.id === d.id && openDropdownId?.type === 'estado' ? null : { id: d.id, type: 'estado' })}
-                          >
-                            <span className="truncate pr-1 uppercase">{d.estado || "---"}</span>
-                            <ChevronDown size={10} className="opacity-40" />
-                          </div>
-
-                          {/* Menú Desplegable ESTADO */}
-                          {openDropdownId?.id === d.id && openDropdownId?.type === 'estado' && (
-                            <div className="absolute top-[85%] left-1/2 -translate-x-1/2 z-[100] mt-1 w-36 bg-[#0b1621] border border-[#152233] rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden animate-in slide-in-from-top-2 duration-200">
-                              {estadosGestion.map(st => (
-                                <button
-                                  key={st}
-                                  onClick={() => {
-                                    actualizarSoporte(d.id, "estado", st);
-                                    setOpenDropdownId(null);
-                                  }}
-                                  className={cn(
-                                    "w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all text-white border-b border-white/5 last:border-0",
-                                    d.estado === st ? "bg-white/5 text-amber-400" : ""
-                                  )}
-                                >
-                                  {st}
-                                </button>
-                              ))}
-                            </div>
+                    {loading ? (
+                      Array.from({ length: 8 }).map((_, i) => (
+                        <tr key={i} className="border-b border-[#152233]/40">
+                          <td colSpan={13} className="px-4 py-6">
+                            <Skeleton className="h-8 w-full" />
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      datosFiltrados.map((d) => (
+                        <tr
+                          key={d.id}
+                          className={cn(
+                            "transition-all group border-l-4 border-transparent hover:border-[#00e5a0]/60 hover:bg-[#060d14]/60",
+                            d.prioridad ? "bg-rose-500/10 border-l-rose-500" : "",
+                            openDropdownId?.id === d.id ? "relative z-50 bg-[#060d14] shadow-[0_0_30px_rgba(0,0,0,0.9)]" : "relative z-0"
                           )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={cn(
-                            "text-[10px] font-black px-3 py-1.5 rounded-xl transition-all inline-flex items-center justify-center gap-2",
-                            d.estado === 'Resuelto' ? 'text-emerald-500 animate-pulse-slow' :
-                              d.estado === 'Enrutado' ? 'text-amber-400' :
-                                d.estado === 'Mal Escalado' ? 'text-rose-500' :
-                                  'text-white'
-                          )}>
-                            {!d.fecha_fin && d.fecha_inicio_sitio && (
-                              <div className="w-1 h-1 rounded-full bg-current animate-pulse shadow-[0_0_8px_currentColor]" />
+                        >
+                          <td className="px-4 py-3">
+                            <p className="text-[11px] font-bold tracking-tight text-slate-300">{formatearFecha(d.fecha_hora).split('|')[1]}</p>
+                            <p className="text-[9px] text-slate-400 font-medium">{formatearFecha(d.fecha_hora).split('|')[0]}</p>
+                          </td>
+                          <td className="px-2 py-3 text-center">
+                            <span className={cn(
+                              "text-[10px] font-black px-2.5 py-1 rounded-lg transition-all",
+                              d.en_sitio
+                                ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                                : "bg-slate-100/50 text-slate-400 border border-slate-200"
+                            )}>
+                              {d.en_sitio ? "SI" : "NO"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-[11px] font-black uppercase tracking-tight text-white">{d.nombre}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-[11px] font-bold text-slate-400">{d.celular || "315 --"}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-[11px] font-bold uppercase tracking-tighter truncate max-w-[150px] inline-block text-white">{d.torre}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="px-2.5 py-1 bg-[#0b1621] text-white rounded-lg font-mono font-black text-[10px] border border-white/20">
+                                {d.incidente || "INC-0000"}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  navigator.clipboard.writeText(d.incidente || "INC-0000");
+                                  const btn = e.currentTarget;
+                                  toast.success("incidente copiado al portapapeles");
+                                }}
+                                className="p-1.5 hover:bg-[#00e5a0]/20 hover:text-[#00e5a0] text-[#608096] rounded-md transition-all border border-transparent hover:border-[#00e5a0]/30 shadow-sm"
+                                title="Copiar Incidente"
+                              >
+                                <Copy size={12} strokeWidth={2.5} />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={cn(
+                              "px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight",
+                              d.gestion === 'AUSENCIA' || d.gestion === 'ASESORIA' ? 'bg-amber-500/10 text-amber-600' :
+                                d.gestion === 'DIRECTO' ? 'bg-orange-500/10 text-orange-600' :
+                                  'bg-emerald-500/10 text-emerald-600'
+                            )}>
+                              {d.gestion}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="text-[10px] font-medium line-clamp-2 max-w-[300px] text-slate-400 group-hover:text-white transition-colors" title={decodificarObservaciones(d.observaciones)}>
+                              {decodificarObservaciones(d.observaciones)}
+                            </p>
+                          </td>
+                          <td className="px-2 py-3 text-center">
+                            <button
+                              onClick={() => {
+                                setActiveChatSoporteId(d.id);
+                                setActiveChatIncidente(d.incidente);
+                              }}
+                              className="p-2 border rounded-xl transition-all relative flex items-center justify-center mx-auto hover:bg-[#00e5a0]/5 bg-[#060d14] border-[#152233] text-[#608096]"
+                            >
+                              <MessageSquare size={14} strokeWidth={2} />
+                              {d.chat_visto_soporte === false && (
+                                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center">
+                                  <span className="absolute inline-flex h-full w-full rounded-full bg-[#00e5a0] opacity-50 animate-ping shadow-[0_0_15px_#00e5a0]"></span>
+                                  <span className="relative inline-flex rounded-full h-full w-full bg-[#00e5a0] border-2 border-[#060d14] shadow-[0_0_10px_rgba(0,229,160,0.8)] items-center justify-center">
+                                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse shadow-sm"></span>
+                                  </span>
+                                </span>
+                              )}
+                            </button>
+                          </td>
+                          <td className="px-2 py-3 text-center">
+                            <button
+                              onClick={() => {
+                                const textoFormateado = formatearPlantilla(d.plantilla || "{}");
+                                let evList: string[] = [];
+                                if (d.evidencias_files && (d.evidencias_files as any[]).length > 0) {
+                                  evList = (d.evidencias_files as any[]).map(f => `http://127.0.0.1:8000${f.archivo}`);
+                                } else {
+                                  try { if (d.evidencias) evList = JSON.parse(d.evidencias); } catch (e) { }
+                                }
+                                setModalConfig({ id: d.id, text: textoFormateado, title: "PLANTILLA TÉCNICA", evidencias: evList });
+                              }}
+                              className="p-2 border rounded-xl transition-all flex items-center justify-center mx-auto hover:bg-[#00b8e5]/5 bg-[#060d14] border-[#152233] text-[#608096]"
+                            >
+                              <ClipboardList size={14} strokeWidth={2} />
+                            </button>
+                          </td>
+                          <td className="px-2 py-3 text-center">
+                            <div className={cn("relative flex justify-center", openDropdownId?.id === d.id && openDropdownId?.type === 'login' ? "z-50" : "z-0")}>
+                              <button
+                                onClick={() => setOpenDropdownId(openDropdownId?.id === d.id && openDropdownId?.type === 'login' ? null : { id: d.id, type: 'login' })}
+                                className="w-32 border text-[9px] font-black uppercase py-2 px-3 rounded-xl flex items-center justify-between transition-all active:scale-95 bg-[#060d14] border-[#152233] text-white hover:border-[#00e5a0]/30"
+                              >
+                                <span className="truncate pr-2">{d.login_n1 === "POR_ASIGNAR" ? "--" : d.login_n1}</span>
+                                <ChevronDown size={10} className={cn("text-white/40 transition-transform", openDropdownId?.id === d.id && openDropdownId?.type === 'login' && "rotate-180")} />
+                              </button>
+
+                              {openDropdownId?.id === d.id && openDropdownId?.type === 'login' && (
+                                <>
+                                  <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownId(null)} />
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-40 z-50 rounded-2xl border border-[#152233] bg-[#0b1621]/95 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden animate-in zoom-in-95 duration-200">
+                                    <button
+                                      onClick={() => { actualizarSoporte(d.id, "login_n1", "POR_ASIGNAR"); setOpenDropdownId(null); }}
+                                      className="w-full px-5 py-3 text-[9px] font-bold text-left hover:bg-rose-500/10 hover:text-rose-500 transition-colors border-b border-white/5 text-white/50"
+                                    >
+                                      -- QUITAR ASIGNACIÓN --
+                                    </button>
+                                    <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                                      {asesoresSoporte.map(a => (
+                                        <button
+                                          key={a.id}
+                                          onClick={() => {
+                                            actualizarSoporte(d.id, "login_n1", a.login);
+                                            setOpenDropdownId(null);
+                                          }}
+                                          className="w-full px-5 py-3 text-[9px] font-black text-left hover:bg-[#00e5a0]/10 hover:text-[#00e5a0] transition-colors border-b border-white/5 last:border-0 text-white/80 uppercase"
+                                        >
+                                          {a.login}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-8 py-3 text-center relative">
+                            <div
+                              className={cn(
+                                "w-28 border text-[9px] font-black rounded-xl py-1.5 px-3 flex items-center justify-between mx-auto opacity-80 cursor-pointer hover:opacity-100 transition-all",
+                                d.estado === 'Resuelto' || d.estado === 'ACTIVO' ? 'bg-emerald-600/10 text-emerald-600 border-emerald-600/20 hover:bg-emerald-600/20' :
+                                  d.estado === 'En gestión' || d.estado === 'PENDIENTE' ? 'bg-[#00b8e5]/10 text-[#00b8e5] border-[#00b8e5]/20 hover:bg-[#00b8e5]/20' :
+                                    d.estado === 'Enrutado' ? 'bg-amber-400/10 text-amber-400 border-amber-400/20 hover:bg-amber-400/20' :
+                                      d.estado === 'Mal Escalado' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500/20' :
+                                        "bg-[#060d14] text-white border-[#152233]"
+                              )}
+                              onClick={() => setOpenDropdownId(openDropdownId?.id === d.id && openDropdownId?.type === 'estado' ? null : { id: d.id, type: 'estado' })}
+                            >
+                              <span className="truncate pr-1 uppercase">{d.estado || "---"}</span>
+                              <ChevronDown size={10} className="opacity-40" />
+                            </div>
+
+                            {/* Menú Desplegable ESTADO */}
+                            {openDropdownId?.id === d.id && openDropdownId?.type === 'estado' && (
+                              <div className="absolute top-[85%] left-1/2 -translate-x-1/2 z-[100] mt-1 w-36 bg-[#0b1621] border border-[#152233] rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                                {estadosGestion.map(st => (
+                                  <button
+                                    key={st}
+                                    onClick={() => {
+                                      actualizarSoporte(d.id, "estado", st);
+                                      setOpenDropdownId(null);
+                                    }}
+                                    className={cn(
+                                      "w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all text-white border-b border-white/5 last:border-0",
+                                      d.estado === st ? "bg-white/5 text-amber-400" : ""
+                                    )}
+                                  >
+                                    {st}
+                                  </button>
+                                ))}
+                              </div>
                             )}
-                            <LiveTimer inicio={d.fecha_inicio_sitio} fin={d.fecha_fin} />
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={cn(
+                              "text-[10px] font-black px-3 py-1.5 rounded-xl transition-all inline-flex items-center justify-center gap-2",
+                              d.estado === 'Resuelto' ? 'text-emerald-500 animate-pulse-slow' :
+                                d.estado === 'Enrutado' ? 'text-amber-400' :
+                                  d.estado === 'Mal Escalado' ? 'text-rose-500' :
+                                    'text-white'
+                            )}>
+                              {!d.fecha_fin && d.fecha_inicio_sitio && (
+                                <div className="w-1 h-1 rounded-full bg-current animate-pulse shadow-[0_0_8px_currentColor]" />
+                              )}
+                              <LiveTimer inicio={d.fecha_inicio_sitio} fin={d.fecha_fin} />
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

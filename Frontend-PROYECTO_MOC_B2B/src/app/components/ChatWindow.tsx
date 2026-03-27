@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, User, MessageSquare, X, Clock, Image as ImageIcon, Paperclip, Share2, Copy, Zap } from 'lucide-react';
+import { Send, User, MessageSquare, X, Clock, Image as ImageIcon, Paperclip, Share2, Copy, Zap, Loader2 } from 'lucide-react';
+import { toast } from "sonner";
+import imageCompression from 'browser-image-compression';
 
 /**
  * ChatWindow Component - SIMOC Edition
@@ -36,6 +38,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
     const [sharingMessage, setSharingMessage] = useState<Message | null>(null);
     const [incidentsList, setIncidentsList] = useState<any[]>([]);
     const [showShareModal, setShowShareModal] = useState(false);
+    
+    const [isCompressing, setIsCompressing] = useState(false);
     
     const scrollRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -126,13 +130,38 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
         }
     }, [messages]);
 
-    const handleImageSelect = (file: File) => {
-        if (file) {
+    const handleImageSelect = async (file: File) => {
+        if (!file) return;
+
+        // Validar que sea una imagen
+        if (!file.type.startsWith('image/')) {
+            toast.error("El archivo seleccionado no es una imagen");
+            return;
+        }
+
+        setIsCompressing(true);
+        const options = {
+            maxSizeMB: 1,            // Máximo 1MB
+            maxWidthOrHeight: 1920, // Resolución Full HD máxima
+            useWebWorker: true,
+            initialQuality: 0.8,    // Calidad inicial del 80%
+        };
+
+        try {
+            console.log(`Tamano original: ${file.size / 1024 / 1024} MB`);
+            const compressedFile = await imageCompression(file, options);
+            console.log(`Tamano comprimido: ${compressedFile.size / 1024 / 1024} MB`);
+
             const reader = new FileReader();
             reader.onloadend = () => {
                 setSelectedImage(reader.result as string);
+                setIsCompressing(false);
             };
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(compressedFile);
+        } catch (error) {
+            console.error("Error al comprimir la imagen:", error);
+            toast.error("No se pudo procesar la imagen");
+            setIsCompressing(false);
         }
     };
 
@@ -174,10 +203,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
             
             setSharingMessage(null);
             setShowShareModal(false);
-            alert(`✓ Mensaje reenviado al Caso ID ${targetSoporteId}`);
+            toast.success(`Mensaje reenviado al Caso ID ${targetSoporteId}`);
         } catch (error) {
             console.error(error);
-            alert("Error al reenviar");
+            toast.error("Error al reenviar");
         }
     };
 
@@ -270,16 +299,43 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
                                         ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-[#060d14] font-bold rounded-tr-none border border-emerald-400/50"
                                         : "bg-[#060d14]/80 backdrop-blur-md border border-white/5 text-slate-200 rounded-tl-none"
                                 )}>
-                                    {msg.imagen && (
-                                        <div className="p-1.5">
-                                            <img 
-                                                src={msg.imagen.startsWith('data:') ? msg.imagen : `http://127.0.0.1:8000${msg.imagen}`} 
-                                                alt="Chat attachment" 
-                                                className="rounded-2xl max-h-[350px] w-full object-cover cursor-pointer hover:scale-[1.01] transition-transform shadow-lg"
-                                                onClick={() => window.open(msg.imagen.startsWith('data:') ? msg.imagen : `http://127.0.0.1:8000${msg.imagen}`)}
-                                            />
-                                        </div>
-                                    )}
+                                    {msg.imagen && (() => {
+                                        const imageUrl = msg.imagen.startsWith('data:') || msg.imagen.startsWith('http') 
+                                            ? msg.imagen 
+                                            : `http://127.0.0.1:8000${msg.imagen}`;
+                                        
+                                        const handleDownload = (e: React.MouseEvent) => {
+                                            e.stopPropagation();
+                                            // Si es base64, descarguemos usando un anchor
+                                            if (imageUrl.startsWith('data:')) {
+                                                const a = document.createElement('a');
+                                                a.href = imageUrl;
+                                                a.download = `chat_image_${new Date().getTime()}.png`;
+                                                a.click();
+                                            } else {
+                                                // Descarga pasando por un anchor
+                                                window.open(imageUrl, '_blank');
+                                            }
+                                        };
+
+                                        return (
+                                            <div className="p-1.5 relative group/img">
+                                                <img 
+                                                    src={imageUrl} 
+                                                    alt="Chat attachment" 
+                                                    className="rounded-2xl max-h-[350px] w-full object-cover cursor-pointer hover:scale-[1.01] transition-transform shadow-lg"
+                                                    onClick={() => window.open(imageUrl, '_blank')}
+                                                />
+                                                <button
+                                                    onClick={handleDownload}
+                                                    className="absolute top-4 right-4 p-2 bg-black/50 text-white rounded-full opacity-0 group-hover/img:opacity-100 transition-opacity hover:bg-black/80 backdrop-blur-md"
+                                                    title="Descargar imagen"
+                                                >
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                                </button>
+                                            </div>
+                                        );
+                                    })()}
                                     {msg.mensaje && (
                                         <div className="px-6 py-4 leading-relaxed break-words whitespace-pre-wrap">
                                             {msg.mensaje}
@@ -347,10 +403,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
                         
                         <button
                             onClick={sendMessage}
-                            disabled={!inputMessage.trim() && !selectedImage}
+                            disabled={!inputMessage.trim() && !selectedImage || isCompressing}
                             className="p-4 bg-emerald-500 text-[#060d14] rounded-2xl hover:bg-emerald-400 disabled:opacity-20 disabled:grayscale transition-all shadow-[0_10px_30px_rgba(0,229,160,0.2)] active:scale-95"
                         >
-                            <Send size={20} className="translate-x-0.5" />
+                            {isCompressing ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className="translate-x-0.5" />}
                         </button>
                     </div>
                 </div>

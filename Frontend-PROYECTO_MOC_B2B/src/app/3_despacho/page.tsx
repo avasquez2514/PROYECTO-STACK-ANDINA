@@ -9,6 +9,9 @@ import {
 import ChatWindow from "../components/ChatWindow";
 import LiveTimer from "../components/LiveTimer";
 import NoticiaPanel from "../components/NoticiaPanel";
+import Skeleton from "../components/Skeleton";
+import FullscreenButton from "../components/FullscreenButton";
+import { toast } from "sonner";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
@@ -30,6 +33,7 @@ export default function DespachoPage() {
   const [asesoresSoporte, setAsesoresSoporte] = useState<any[]>([]);
   const [hasMounted, setHasMounted] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  const [loading, setLoading] = useState(true);
   const [loggedUser] = useState("DESPACHO");
 
   // Chat State
@@ -49,12 +53,16 @@ export default function DespachoPage() {
     cargarDatos();
     cargarAsesores();
     cargarNoticia();
-    const interval = setInterval(() => {
-      cargarDatos();
-      cargarAsesores();
-      cargarNoticia();
-    }, 5000);
-    return () => clearInterval(interval);
+
+    const socket = new WebSocket("ws://127.0.0.1:8000/ws/updates/");
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.model === 'soporte') cargarDatos();
+        if (data.model === 'asesor') cargarAsesores();
+        if (data.model === 'noticia') cargarNoticia();
+    };
+
+    return () => socket.close();
   }, []);
 
   const cargarDatos = async () => {
@@ -62,7 +70,11 @@ export default function DespachoPage() {
       const res = await fetch("http://127.0.0.1:8000/api/soporte/");
       const json = await res.json();
       setDatos(json.sort((a: any, b: any) => a.id - b.id));
-    } catch (e) { console.error(e); }
+      setLoading(false);
+    } catch (e) { 
+      console.error(e);
+      setLoading(false);
+    }
   };
 
   const handleUpdateSoporte = async (id: number, field: string, value: any) => {
@@ -70,9 +82,8 @@ export default function DespachoPage() {
       await fetch(`http://127.0.0.1:8000/api/soporte/${id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [field]: value }),
+        body: JSON.stringify({ [field]: value, admin_user: "DESPACHO" }),
       });
-      cargarDatos();
     } catch (e) { console.error(e); }
   };
 
@@ -275,6 +286,7 @@ export default function DespachoPage() {
             </div>
 
             <div className="flex items-center gap-4">
+              <FullscreenButton />
               <div className="w-10 h-10 rounded-full border border-white/10 bg-white/5 flex items-center justify-center">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_emerald]" />
               </div>
@@ -342,136 +354,142 @@ export default function DespachoPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#152233]/40">
-                    {datosFiltrados.map((d) => (
-                      <tr key={d.id} className="transition-all group border-l-4 border-transparent hover:border-amber-400/60 hover:bg-[#060d14]/60">
-                        <td className="px-4 py-3">
-                          <p className="text-[11px] font-bold tracking-tight text-slate-300">{formatearFecha(d.fecha_hora).split('|')[1]}</p>
-                          <p className="text-[9px] text-slate-400 font-medium">{formatearFecha(d.fecha_hora).split('|')[0]}</p>
-                        </td>
-                        <td className="px-2 py-3 text-center">
-                          <span className={cn(
-                            "text-[10px] font-black px-2.5 py-1 rounded-lg transition-all",
-                            d.en_sitio
-                              ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                              : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
-                          )}>
-                            {d.en_sitio ? "SI" : "NO"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-[11px] font-black uppercase tracking-tight text-white group-hover:text-amber-400 transition-colors">{d.nombre}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-[11px] font-bold text-slate-400">{d.celular || "---"}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-[11px] font-bold uppercase tracking-tighter truncate max-w-[150px] inline-block text-white">{d.torre}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2.5 py-1 bg-[#0b1621] text-white rounded-lg font-mono font-black text-[10px] border border-white/20">
-                              {d.incidente || "INC-0000"}
-                            </span>
-                            <button
-                              onClick={(e) => {
-                                navigator.clipboard.writeText(d.incidente || "INC-0000");
-                                const btn = e.currentTarget;
-                                const originalHtml = btn.innerHTML;
-                                btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00e5a0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                                setTimeout(() => {
-                                  btn.innerHTML = originalHtml;
-                                }, 1500);
-                              }}
-                              className="p-1.5 hover:bg-[#00e5a0]/20 hover:text-[#00e5a0] text-[#608096] rounded-md transition-all border border-transparent hover:border-[#00e5a0]/30 shadow-sm"
-                              title="Copiar Incidente"
-                            >
-                              <Copy size={12} strokeWidth={2.5} />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={cn(
-                            "px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight border",
-                            d.gestion === 'AUSENCIA' || d.gestion === 'ASESORIA' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                              d.gestion === 'DIRECTO' ? 'bg-orange-500/10 text-orange-600 border-orange-500/20' :
-                                'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                          )}>
-                            {d.gestion}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="text-[11px] font-medium italic line-clamp-2 max-w-[250px] text-slate-400 group-hover:text-white transition-colors" title={decodificarObservaciones(d.observaciones)}>
-                            {decodificarObservaciones(d.observaciones)}
-                          </p>
-                        </td>
-                        <td className="px-2 py-3 text-center">
-                          <button
-                            onClick={() => {
-                              const textoFormateado = formatearPlantilla(d.plantilla || "{}");
-                              let evList: string[] = [];
-                              if (d.evidencias_files && (d.evidencias_files as any[]).length > 0) {
-                                evList = (d.evidencias_files as any[]).map(f => `http://127.0.0.1:8000${f.archivo}`);
-                              } else {
-                                try { if (d.evidencias) evList = JSON.parse(d.evidencias); } catch (e) { }
-                              }
-                              setModalConfig({ id: d.id, text: textoFormateado, title: "PLANTILLA TÉCNICA", evidencias: evList });
-                            }}
-                            className="p-2 border rounded-xl transition-all flex items-center justify-center mx-auto hover:bg-[#00b8e5]/5 bg-[#060d14] border-[#152233] text-[#608096]"
-                          >
-                            <ClipboardList size={14} strokeWidth={2} />
-                          </button>
-                        </td>
-                        <td className="px-2 py-3 text-center">
-                          <div
-                            className="w-32 border text-[9px] font-black uppercase py-2 px-3 rounded-xl flex items-center justify-between mx-auto bg-[#060d14] border-[#152233] text-white opacity-80"
-                          >
-                            <span className="truncate pr-2">{d.login_n1 === "POR_ASIGNAR" ? "--" : d.login_n1}</span>
-                            <ChevronDown size={10} className="text-white/40" />
-                          </div>
-                        </td>
-                        <td className="px-8 py-3 text-center">
-                          <div
-                            className={cn(
-                              "w-28 border text-[9px] font-black rounded-xl py-1.5 px-3 flex items-center justify-center mx-auto opacity-80 transition-all",
-                              d.estado === 'Resuelto' || d.estado === 'ACTIVO' ? 'bg-emerald-600/10 text-emerald-600 border-emerald-600/20' :
-                                d.estado === 'En gestión' || d.estado === 'PENDIENTE' ? 'bg-[#00b8e5]/10 text-[#00b8e5] border-[#00b8e5]/20' :
-                                  d.estado === 'Enrutado' ? 'bg-amber-400/10 text-amber-400 border-amber-400/20' :
-                                    d.estado === 'Mal Escalado' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
-                                      "bg-[#060d14] text-white border-[#152233]"
-                            )}
-                          >
-                            <span className="truncate uppercase">{d.estado || "---"}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={cn(
-                            "text-[10px] font-black px-3 py-1.5 rounded-xl transition-all inline-flex items-center justify-center gap-2",
-                            d.estado === 'Resuelto' ? 'text-emerald-500 animate-pulse-slow' :
-                              d.estado === 'Enrutado' ? 'text-amber-400' :
-                                d.estado === 'Mal Escalado' ? 'text-rose-500' :
-                                  'text-white'
-                          )}>
-                            {!d.fecha_fin && d.fecha_inicio_sitio && (
-                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
-                            )}
-                            <LiveTimer inicio={d.fecha_inicio_sitio} fin={d.fecha_fin} />
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <button
-                            onClick={() => handleUpdateSoporte(d.id, "prioridad", !d.prioridad)}
-                            className={cn(
-                              "px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border",
-                              d.prioridad 
-                                ? "bg-rose-500 text-white border-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.4)] animate-pulse" 
-                                : "bg-[#060d14] text-[#608096] border-[#152233] hover:border-rose-500/50 hover:text-rose-400"
-                            )}
-                          >
-                            {d.prioridad ? "PRIORIDAD ALTA" : "NORMAL"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {loading ? (
+                        Array.from({ length: 8 }).map((_, i) => (
+                            <tr key={i} className="border-b border-[#152233]/40">
+                                <td colSpan={13} className="px-4 py-6">
+                                    <Skeleton className="h-8 w-full" />
+                                </td>
+                            </tr>
+                        ))
+                    ) : (
+                        datosFiltrados.map((d) => (
+                          <tr key={d.id} className="transition-all group border-l-4 border-transparent hover:border-amber-400/60 hover:bg-[#060d14]/60">
+                            <td className="px-4 py-3">
+                              <p className="text-[11px] font-bold tracking-tight text-slate-300">{formatearFecha(d.fecha_hora).split('|')[1]}</p>
+                              <p className="text-[9px] text-slate-400 font-medium">{formatearFecha(d.fecha_hora).split('|')[0]}</p>
+                            </td>
+                            <td className="px-2 py-3 text-center">
+                              <span className={cn(
+                                "text-[10px] font-black px-2.5 py-1 rounded-lg transition-all",
+                                d.en_sitio
+                                  ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                                  : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                              )}>
+                                {d.en_sitio ? "SI" : "NO"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-[11px] font-black uppercase tracking-tight text-white group-hover:text-amber-400 transition-colors">{d.nombre}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-[11px] font-bold text-slate-400">{d.celular || "---"}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-[11px] font-bold uppercase tracking-tighter truncate max-w-[150px] inline-block text-white">{d.torre}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2.5 py-1 bg-[#0b1621] text-white rounded-lg font-mono font-black text-[10px] border border-white/20">
+                                  {d.incidente || "INC-0000"}
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    navigator.clipboard.writeText(d.incidente || "INC-0000");
+                                    const btn = e.currentTarget;
+                                    toast.success("incidente copiado al portapapeles");
+                                  }}
+                                  className="p-1.5 hover:bg-[#00e5a0]/20 hover:text-[#00e5a0] text-[#608096] rounded-md transition-all border border-transparent hover:border-[#00e5a0]/30 shadow-sm"
+                                  title="Copiar Incidente"
+                                >
+                                  <Copy size={12} strokeWidth={2.5} />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={cn(
+                                "px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight border",
+                                d.gestion === 'AUSENCIA' || d.gestion === 'ASESORIA' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                                  d.gestion === 'DIRECTO' ? 'bg-orange-500/10 text-orange-600 border-orange-500/20' :
+                                    'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                              )}>
+                                {d.gestion}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="text-[11px] font-medium italic line-clamp-2 max-w-[250px] text-slate-400 group-hover:text-white transition-colors" title={decodificarObservaciones(d.observaciones)}>
+                                {decodificarObservaciones(d.observaciones)}
+                              </p>
+                            </td>
+                            <td className="px-2 py-3 text-center">
+                              <button
+                                onClick={() => {
+                                  const textoFormateado = formatearPlantilla(d.plantilla || "{}");
+                                  let evList: string[] = [];
+                                  if (d.evidencias_files && (d.evidencias_files as any[]).length > 0) {
+                                    evList = (d.evidencias_files as any[]).map(f => `http://127.0.0.1:8000${f.archivo}`);
+                                  } else {
+                                    try { if (d.evidencias) evList = JSON.parse(d.evidencias); } catch (e) { }
+                                  }
+                                  setModalConfig({ id: d.id, text: textoFormateado, title: "PLANTILLA TÉCNICA", evidencias: evList });
+                                }}
+                                className="p-2 border rounded-xl transition-all flex items-center justify-center mx-auto hover:bg-[#00b8e5]/5 bg-[#060d14] border-[#152233] text-[#608096]"
+                              >
+                                <ClipboardList size={14} strokeWidth={2} />
+                              </button>
+                            </td>
+                            <td className="px-2 py-3 text-center">
+                              <div
+                                className="w-32 border text-[9px] font-black uppercase py-2 px-3 rounded-xl flex items-center justify-between mx-auto bg-[#060d14] border-[#152233] text-white opacity-80"
+                              >
+                                <span className="truncate pr-2">{d.login_n1 === "POR_ASIGNAR" ? "--" : d.login_n1}</span>
+                                <ChevronDown size={10} className="text-white/40" />
+                              </div>
+                            </td>
+                            <td className="px-8 py-3 text-center">
+                              <div
+                                className={cn(
+                                  "w-28 border text-[9px] font-black rounded-xl py-1.5 px-3 flex items-center justify-center mx-auto opacity-80 transition-all",
+                                  d.estado === 'Resuelto' || d.estado === 'ACTIVO' ? 'bg-emerald-600/10 text-emerald-600 border-emerald-600/20' :
+                                    d.estado === 'En gestión' || d.estado === 'PENDIENTE' ? 'bg-[#00b8e5]/10 text-[#00b8e5] border-[#00b8e5]/20' :
+                                      d.estado === 'Enrutado' ? 'bg-amber-400/10 text-amber-400 border-amber-400/20' :
+                                        d.estado === 'Mal Escalado' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
+                                          "bg-[#060d14] text-white border-[#152233]"
+                                )}
+                              >
+                                <span className="truncate uppercase">{d.estado || "---"}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={cn(
+                                "text-[10px] font-black px-3 py-1.5 rounded-xl transition-all inline-flex items-center justify-center gap-2",
+                                d.estado === 'Resuelto' ? 'text-emerald-500 animate-pulse-slow' :
+                                  d.estado === 'Enrutado' ? 'text-amber-400' :
+                                    d.estado === 'Mal Escalado' ? 'text-rose-500' :
+                                      'text-white'
+                              )}>
+                                {!d.fecha_fin && d.fecha_inicio_sitio && (
+                                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+                                )}
+                                <LiveTimer inicio={d.fecha_inicio_sitio} fin={d.fecha_fin} />
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                onClick={() => handleUpdateSoporte(d.id, "prioridad", !d.prioridad)}
+                                className={cn(
+                                  "px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border",
+                                  d.prioridad 
+                                    ? "bg-rose-500 text-white border-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.4)] animate-pulse" 
+                                    : "bg-[#060d14] text-[#608096] border-[#152233] hover:border-rose-500/50 hover:text-rose-400"
+                                )}
+                              >
+                                {d.prioridad ? "PRIORIDAD ALTA" : "NORMAL"}
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -509,6 +527,7 @@ export default function DespachoPage() {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(modalConfig.text);
+                    toast.success("Información copiada al portapapeles");
                   }}
                   className="w-full py-5 border-2 text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl transition-all duration-300 bg-[#0b1621] border-[#00b8e5]/40 text-[#00b8e5] hover:bg-[#00b8e5] hover:text-[#061511] shadow-[0_0_20px_rgba(0,184,229,0.1)]"
                 >

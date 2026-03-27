@@ -32,12 +32,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         message = data.get('message', '')
         remitente = data.get('remitente', 'SISTEMA')
         rol = data.get('rol') 
-        imagen = data.get('imagen') # BASE64 string
+        imagen_b64 = data.get('imagen') # BASE64 string
 
-        # Save message to database
-        await self.save_message(self.soporte_id, remitente, message, rol, imagen)
+        # Save message to database and get the instance
+        chat_msg = await self.save_message(self.soporte_id, remitente, message, rol, imagen_b64)
+        
+        # Get the URL of the saved image if it exists
+        imagen_url = chat_msg.imagen.url if chat_msg.imagen else None
 
-        # Send message to room group
+        # Send message to room group (Now with URL instead of B64)
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -45,23 +48,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'message': message,
                 'remitente': remitente,
                 'rol': rol,
-                'imagen': imagen
+                'imagen_url': imagen_url
             }
         )
 
     # Receive message from room group
     async def chat_message(self, event):
-        message = event['message']
-        remitente = event['remitente']
-        rol = event.get('rol')
-        imagen = event.get('imagen')
-
         # Send message to WebSocket
         await self.send(text_data=json.dumps({
-            'message': message,
-            'remitente': remitente,
-            'rol': rol,
-            'imagen': imagen
+            'message': event['message'],
+            'remitente': event['remitente'],
+            'rol': event.get('rol'),
+            'imagen': event.get('imagen_url') # Enviar la URL al frontend
         }))
 
     @database_sync_to_async
@@ -94,3 +92,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             mensaje=message,
             imagen=file_obj
         )
+
+class DataUpdateConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        await self.channel_layer.group_add("global_updates", self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard("global_updates", self.channel_name)
+
+    async def data_update(self, event):
+        # Event structure: {"type": "data_update", "model": "...", "action": "..."}
+        await self.send(text_data=json.dumps({
+            'model': event.get('model'),
+            'action': event.get('action'),
+            'data': event.get('data')
+        }))
