@@ -11,10 +11,16 @@ interface Noticia {
 
 interface NoticiaPanelProps {
   noticia: Noticia | null;
+  variant?: "amber" | "emerald";
 }
 
-export default function NoticiaPanel({ noticia }: NoticiaPanelProps) {
+export default function PanelNoticias({ noticia, variant = "amber" }: NoticiaPanelProps) {
   if (!noticia) return null;
+
+  const isEmerald = variant === "emerald";
+  const accentColor = isEmerald ? "emerald-500" : "amber-500";
+  const shadowColor = isEmerald ? "rgba(16,185,129,0.1)" : "rgba(245,158,11,0.1)";
+  const dotShadow = isEmerald ? "#10b981" : "#fbbf24";
 
   return (
     <div className="animate-in fade-in slide-in-from-top-4 duration-700">
@@ -23,11 +29,11 @@ export default function NoticiaPanel({ noticia }: NoticiaPanelProps) {
           {/* Fixed Label Section */}
           <div className="z-20 h-full flex items-center px-8 bg-[#0b1621] border-r border-white/5 shadow-[20px_0_30px_rgba(0,0,0,0.5)]">
             <div className="flex items-center gap-4">
-              <div className="relative w-10 h-10 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+              <div className={`relative w-10 h-10 bg-${accentColor}/10 border border-${accentColor}/20 rounded-xl flex items-center justify-center text-${accentColor} shadow-[0_0_15px_${shadowColor}]`}>
                 <Megaphone size={18} className="animate-bounce-subtle" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-500/90 leading-none">AVISO IMPORTANTE</span>
+                <span className={`text-[9px] font-black uppercase tracking-[0.3em] text-${accentColor}/90 leading-none`}>AVISO IMPORTANTE</span>
                 <span className="text-[7px] font-bold uppercase tracking-widest text-[#608096] mt-1">Live Update</span>
               </div>
             </div>
@@ -43,7 +49,7 @@ export default function NoticiaPanel({ noticia }: NoticiaPanelProps) {
                     <p className="text-sm font-black text-white uppercase tracking-wide">
                       {noticia.contenido}
                     </p>
-                    <span className="inline-block w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#fbbf24] animate-pulse shrink-0" />
+                    <span className={`inline-block w-2 h-2 rounded-full bg-${accentColor} shadow-[0_0_8px_${dotShadow}] animate-pulse shrink-0`} />
                   </div>
                 ))}
               </div>

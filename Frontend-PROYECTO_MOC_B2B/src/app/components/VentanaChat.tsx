@@ -30,7 +30,7 @@ interface ChatWindowProps {
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitenteActual, nombreRemitente, onClose }) => {
+const VentanaChat: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitenteActual, nombreRemitente, onClose }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputMessage, setInputMessage] = useState("");
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -48,7 +48,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
     useEffect(() => {
         const fetchHistory = async () => {
             try {
-                const res = await fetch(`http://127.0.0.1:8000/api/chat/?soporte_id=${soporteId}`);
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/?soporte_id=${soporteId}`);
                 const data = await res.json();
                 setMessages(data);
             } catch (error) {
@@ -61,7 +61,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
 
     const cargarIncidentesParaCompartir = async () => {
         try {
-            const res = await fetch("http://127.0.0.1:8000/api/soporte/");
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/soporte/`);
             const data = await res.json();
             // Filtrar el incidente actual y mostrar los más recientes para reenviar
             setIncidentsList(data.filter((d: any) => d.id !== soporteId).slice(0, 15));
@@ -70,7 +70,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
 
     // 2. Conexión WebSocket
     useEffect(() => {
-        const ws = new WebSocket(`ws://127.0.0.1:8000/ws/chat/${soporteId}/`);
+        const ws = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}/ws/chat/${soporteId}/`);
 
         const markAsRead = async () => {
             let field = '';
@@ -79,7 +79,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
             else field = 'chat_visto_tecnico'; 
 
             try {
-                await fetch(`http://127.0.0.1:8000/api/soporte/${soporteId}/`, {
+                await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/soporte/${soporteId}/`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ [field]: true }),
@@ -190,7 +190,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
         if (!sharingMessage) return;
         
         try {
-            await fetch(`http://127.0.0.1:8000/api/chat/`, {
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -302,7 +302,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
                                     {msg.imagen && (() => {
                                         const imageUrl = msg.imagen.startsWith('data:') || msg.imagen.startsWith('http') 
                                             ? msg.imagen 
-                                            : `http://127.0.0.1:8000${msg.imagen}`;
+                                            : `${process.env.NEXT_PUBLIC_API_URL}${msg.imagen}`;
                                         
                                         const handleDownload = (e: React.MouseEvent) => {
                                             e.stopPropagation();
@@ -460,4 +460,4 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitente
     );
 };
 
-export default ChatWindow;
+export default VentanaChat;

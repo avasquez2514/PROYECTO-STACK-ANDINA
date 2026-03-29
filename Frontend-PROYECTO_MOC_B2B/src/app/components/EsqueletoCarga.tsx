@@ -5,7 +5,7 @@ interface SkeletonProps {
     count?: number;
 }
 
-const Skeleton = ({ className, count = 1 }: SkeletonProps) => {
+const EsqueletoCarga = ({ className, count = 1 }: SkeletonProps) => {
     return (
         <div className="space-y-2 w-full animate-pulse">
             {Array.from({ length: count }).map((_, i) => (
@@ -18,4 +18,4 @@ const Skeleton = ({ className, count = 1 }: SkeletonProps) => {
     );
 };
 
-export default Skeleton;
+export default EsqueletoCarga;

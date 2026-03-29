@@ -17,7 +17,7 @@ interface HistorialTableProps {
     ocultarCaso: (id: number) => void;
 }
 
-const HistorialTable = ({
+const TablaHistorial = ({
     historial,
     loading,
     hiddenIds,
@@ -242,4 +242,4 @@ const HistorialTable = ({
     );
 };
 
-export default HistorialTable;
+export default TablaHistorial;

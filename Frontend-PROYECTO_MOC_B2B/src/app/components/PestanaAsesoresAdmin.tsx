@@ -1,0 +1,120 @@
+import React from "react";
+import { History, Edit2, Trash2, Clock } from "lucide-react";
+import EsqueletoCarga from "./EsqueletoCarga";
+import TemporizadorEstado from "./TemporizadorEstado";
+import { ESTADOS_CONFIG, PERFILES_CONFIG } from "../../constants";
+import { AsesorSoporte } from "../../types";
+
+interface AdminTabAsesoresProps {
+  loading: boolean;
+  asesores: AsesorSoporte[];
+  busqueda: string;
+  theme: string;
+  setModalConfig: (config: any) => void;
+  handleAction: (endpoint: string, method: string, id?: number, data?: any) => Promise<void>;
+}
+
+const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
+
+export default function PestanaAsesoresAdmin({
+  loading,
+  asesores,
+  busqueda,
+  theme,
+  setModalConfig,
+  handleAction
+}: AdminTabAsesoresProps) {
+  const isLight = theme === 'light';
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+      <div className="glass-panel rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
+        <table className="w-full text-left border-collapse">
+          <thead className="bg-[#060d14] text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 border-b border-white/5 shadow-xl">
+            <tr>
+              <th className="px-10 py-7">ID</th>
+              <th className="px-10 py-7">NOMBRES Y APELLIDOS</th>
+              <th className="px-10 py-7">ACCESO / ID</th>
+              <th className="px-10 py-7">PERFIL ASIGNADO</th>
+              <th className="px-10 py-7">ESTADO ACTUAL</th>
+              <th className="px-10 py-7 text-center">GESTIÓN</th>
+            </tr>
+          </thead>
+          <tbody className="text-[11px] font-bold">
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="border-t border-white/5">
+                  <td colSpan={6} className="px-8 py-4">
+                    <EsqueletoCarga className="h-6 w-full" />
+                  </td>
+                </tr>
+              ))
+            ) : (
+              asesores
+                .filter(a => !busqueda || a.nombre_asesor.toUpperCase().includes(busqueda.toUpperCase()) || a.cedula.includes(busqueda))
+                .map((a) => (
+                  <tr key={a.id} className="border-t border-white/5 hover:bg-blue-600/[0.03] transition-all group relative">
+                    <td className="px-8 py-5 text-slate-500 font-mono">#{a.id}</td>
+                    <td className="px-8 py-5 uppercase font-black">{a.nombre_asesor}</td>
+                    <td className="px-8 py-5 uppercase tracking-tighter">
+                      <div className="flex flex-col">
+                        <span>{a.login}</span>
+                        <span className="text-[8px] opacity-50">{a.cedula}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className={cn(
+                        "px-3 py-1 rounded-lg text-[8px] font-black uppercase border animate-blink",
+                        PERFILES_CONFIG[a.perfil]?.bg,
+                        PERFILES_CONFIG[a.perfil]?.color,
+                        PERFILES_CONFIG[a.perfil]?.border
+                      )}>
+                        {PERFILES_CONFIG[a.perfil]?.label}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <div className={cn("w-1.5 h-1.5 rounded-full", ESTADOS_CONFIG[a.estado]?.dot)} />
+                          <span className="uppercase text-[9px] font-black">{ESTADOS_CONFIG[a.estado]?.label || a.estado}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1 border-t border-white/5 pt-1">
+                          <Clock size={10} className="text-slate-500" />
+                          <span className="text-[8px] font-mono text-slate-400">
+                            <TemporizadorEstado lastChange={a.ultimo_cambio_estado} />
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center justify-center gap-4">
+                        <button 
+                          onClick={() => setModalConfig({ type: 'asesor_history', mode: 'edit', data: a })} 
+                          className="p-2 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-all" 
+                          title="Ver Historial de Estados"
+                        >
+                          <History size={16} />
+                        </button>
+                        <button 
+                          onClick={() => setModalConfig({ type: 'asesor', mode: 'edit', data: a })} 
+                          className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button 
+                          onClick={() => { if (confirm('¿ELIMINAR ASESOR?')) handleAction('asesores', 'DELETE', a.id) }} 
+                          className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

@@ -8,7 +8,7 @@ interface AuthTerminalProps {
   showNotify: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
-export default function AuthTerminal({ onLoginSuccess, showNotify }: AuthTerminalProps) {
+export default function TerminalAutenticacion({ onLoginSuccess, showNotify }: AuthTerminalProps) {
   const [authMode, setAuthMode] = useState<"LOGIN" | "REGISTER">("LOGIN");
   const [authForm, setAuthForm] = useState({
     cedula: "",
@@ -30,7 +30,7 @@ export default function AuthTerminal({ onLoginSuccess, showNotify }: AuthTermina
       }
 
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/funcionarios/", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/funcionarios/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -63,7 +63,7 @@ export default function AuthTerminal({ onLoginSuccess, showNotify }: AuthTermina
       }
 
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/funcionarios/login/", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/funcionarios/login/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

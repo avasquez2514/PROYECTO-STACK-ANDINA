@@ -7,7 +7,7 @@ export async function POST(req: Request) {
     console.log("📩 Datos recibidos en Next:", data);
 
     // 🚀 Reenviar a Django
-    const response = await fetch("http://127.0.0.1:8000/api/soporte/", {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/soporte/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
-    const response = await fetch("http://127.0.0.1:8000/api/soportes/");
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/soportes/`);
     const rawText = await response.text();
 
     let data;

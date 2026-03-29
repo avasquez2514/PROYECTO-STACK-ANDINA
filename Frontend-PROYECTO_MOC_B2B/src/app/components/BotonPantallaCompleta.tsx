@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Maximize, Minimize } from 'lucide-react';
 
-const FullscreenButton = () => {
+const BotonPantallaCompleta = () => {
     const [isFullscreen, setIsFullscreen] = useState(false);
 
     useEffect(() => {
@@ -38,4 +38,4 @@ const FullscreenButton = () => {
     );
 };
 
-export default FullscreenButton;
+export default BotonPantallaCompleta;

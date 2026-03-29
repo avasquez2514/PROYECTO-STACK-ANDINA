@@ -7,7 +7,7 @@ interface LiveTimerProps {
   fin: string | null;
 }
 
-export default function LiveTimer({ inicio, fin }: LiveTimerProps) {
+export default function CronometroEnVivo({ inicio, fin }: LiveTimerProps) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {

@@ -11,11 +11,11 @@ import {
     plantillaEnrutarFIBRA,
     plantillaAsesoriaParametros,
     plantillaAsesoriaInfraestructura
-} from "../components/plantillas";
-import PlantillaRender from "../components/PlantillaRender";
-import ChatWindow from "../components/ChatWindow";
-import HistorialTable from "../components/HistorialTable";
-import AuthTerminal from "../components/AuthTerminal";
+} from "../components/Plantillas";
+import RenderizadorPlantilla from "../components/RenderizadorPlantilla";
+import VentanaChat from "../components/VentanaChat";
+import TablaHistorial from "../components/TablaHistorial";
+import TerminalAutenticacion from "../components/TerminalAutenticacion";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
@@ -125,7 +125,7 @@ export default function TecnicosPage() {
 
     const cargarHistorial = async () => {
         try {
-            const res = await fetch("http://127.0.0.1:8000/api/soporte/");
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/soporte/`);
             const data = await res.json();
             // Filtrar por el técnico autenticado usando nombre
             const filtrados = data
@@ -150,7 +150,7 @@ export default function TecnicosPage() {
         }
 
         try {
-            const res = await fetch(`http://127.0.0.1:8000/api/funcionarios/${loggedUserId}/`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/funcionarios/${loggedUserId}/`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ password: newPassword })
@@ -238,7 +238,7 @@ export default function TecnicosPage() {
         }
 
         try {
-            const res = await fetch("http://127.0.0.1:8000/api/soporte/", {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/soporte/`, {
                 method: "POST",
                 body: formData,
             });
@@ -265,7 +265,7 @@ export default function TecnicosPage() {
     // 1. VISTA DE AUTENTICACIÓN
     if (!isAuthenticated) {
         return (
-            <AuthTerminal 
+            <TerminalAutenticacion 
                 showNotify={showNotify}
                 onLoginSuccess={(user) => {
                     setLoggedUser(user.nombre_funcionario || "TÉCNICO DE CAMPO");
@@ -569,12 +569,12 @@ export default function TecnicosPage() {
                                 </p>
                             ) : (
                                 <div className="w-full text-left">
-                                    {gestion === "CIERRE" && tecnologia === "GPON" && <PlantillaRender titulo="Plantilla Cierre GPON" campos={plantillaCierreGPON} formExtra={formExtra} setFormExtra={setFormExtra} numeroInc={incidente} nombreTecnico={loggedUser} />}
-                                    {gestion === "CIERRE" && tecnologia === "HFC" && <PlantillaRender titulo="Plantilla Cierre HFC" campos={plantillaCierreHFC} formExtra={formExtra} setFormExtra={setFormExtra} numeroInc={incidente} nombreTecnico={loggedUser} />}
-                                    {gestion === "CIERRE" && tecnologia === "FIBRA" && <PlantillaRender titulo="Plantilla Cierre FIBRA" campos={plantillaCierreFIBRA} formExtra={formExtra} setFormExtra={setFormExtra} numeroInc={incidente} nombreTecnico={loggedUser} />}
-                                    {gestion === "ENRUTAR" && tecnologia === "GPON" && <PlantillaRender titulo="Plantilla Enrutar GPON" campos={plantillaEnrutarGPON} formExtra={formExtra} setFormExtra={setFormExtra} numeroInc={incidente} nombreTecnico={loggedUser} />}
-                                    {gestion === "ENRUTAR" && tecnologia === "HFC" && <PlantillaRender titulo="Plantilla Enrutar HFC" campos={plantillaEnrutarHFC} formExtra={formExtra} setFormExtra={setFormExtra} numeroInc={incidente} nombreTecnico={loggedUser} />}
-                                    {gestion === "ENRUTAR" && tecnologia === "FIBRA" && <PlantillaRender titulo="Plantilla Enrutar FIBRA" campos={plantillaEnrutarFIBRA} formExtra={formExtra} setFormExtra={setFormExtra} numeroInc={incidente} nombreTecnico={loggedUser} />}
+                                    {gestion === "CIERRE" && tecnologia === "GPON" && <RenderizadorPlantilla titulo="Plantilla Cierre GPON" campos={plantillaCierreGPON} formExtra={formExtra} setFormExtra={setFormExtra} numeroInc={incidente} nombreTecnico={loggedUser} />}
+                                    {gestion === "CIERRE" && tecnologia === "HFC" && <RenderizadorPlantilla titulo="Plantilla Cierre HFC" campos={plantillaCierreHFC} formExtra={formExtra} setFormExtra={setFormExtra} numeroInc={incidente} nombreTecnico={loggedUser} />}
+                                    {gestion === "CIERRE" && tecnologia === "FIBRA" && <RenderizadorPlantilla titulo="Plantilla Cierre FIBRA" campos={plantillaCierreFIBRA} formExtra={formExtra} setFormExtra={setFormExtra} numeroInc={incidente} nombreTecnico={loggedUser} />}
+                                    {gestion === "ENRUTAR" && tecnologia === "GPON" && <RenderizadorPlantilla titulo="Plantilla Enrutar GPON" campos={plantillaEnrutarGPON} formExtra={formExtra} setFormExtra={setFormExtra} numeroInc={incidente} nombreTecnico={loggedUser} />}
+                                    {gestion === "ENRUTAR" && tecnologia === "HFC" && <RenderizadorPlantilla titulo="Plantilla Enrutar HFC" campos={plantillaEnrutarHFC} formExtra={formExtra} setFormExtra={setFormExtra} numeroInc={incidente} nombreTecnico={loggedUser} />}
+                                    {gestion === "ENRUTAR" && tecnologia === "FIBRA" && <RenderizadorPlantilla titulo="Plantilla Enrutar FIBRA" campos={plantillaEnrutarFIBRA} formExtra={formExtra} setFormExtra={setFormExtra} numeroInc={incidente} nombreTecnico={loggedUser} />}
                                     
                                     {/* Nueva lógica para Asesoría */}
                                     {gestion === "ASESORIA" && (
@@ -651,7 +651,7 @@ export default function TecnicosPage() {
 
                 {/* Historial de Gestiones y Chat */}
                 <section className="border border-[#152233] bg-[#0b1621]/60 backdrop-blur-md rounded-2xl p-8 shadow-2xl hud-corners relative mt-12">
-                <HistorialTable 
+                <TablaHistorial 
                     historial={historial}
                     loading={historialLoading}
                     hiddenIds={hiddenIds}
@@ -668,7 +668,7 @@ export default function TecnicosPage() {
 
             {/* CHAT WINDOW COMPONENT */}
             {activeChatSoporteId !== null && (
-                <ChatWindow
+                <VentanaChat
                     soporteId={activeChatSoporteId}
                     incidente={activeChatIncidente}
                     remitenteActual={"TECNICO"}
