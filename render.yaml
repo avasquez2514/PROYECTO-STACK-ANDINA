@@ -3,6 +3,7 @@ services:
   - type: web
     name: backend-soporte
     runtime: python
+    plan: free # Plan gratuito
     buildCommand: "./build.sh"
     startCommand: "daphne -b 0.0.0.0 -p $PORT backend.asgi:application"
     envVars:
@@ -17,17 +18,15 @@ services:
       - key: ALLOWED_HOSTS
         value: "*"
       - key: CORS_ALLOWED_ORIGINS
-        value: "https://frontend-soporte.onrender.com" # Default assumption
-    disk:
-      name: media-soporte
-      mountPath: /opt/render/project/src/Backend-PROYECTO_MOC_B2B/media
-      sizeGB: 1
+        value: "https://frontend-soporte.onrender.com"
     rootDir: Backend-PROYECTO_MOC_B2B
+    # El disco persistente ha sido eliminado para permitir el nivel gratuito
 
   # Node Frontend (Next.js)
   - type: web
     name: frontend-soporte
     runtime: node
+    plan: free # Plan gratuito
     buildCommand: "npm install && npm run build"
     startCommand: "npm run start"
     envVars:
@@ -37,9 +36,9 @@ services:
           name: backend-soporte
           envVarKey: RENDER_EXTERNAL_URL
       - key: NEXT_PUBLIC_WS_URL
-        value: "wss://backend-soporte.onrender.com" # Construct manually
+        value: "wss://backend-soporte.onrender.com"
     rootDir: Frontend-PROYECTO_MOC_B2B
 
 databases:
   - name: db-soporte
-    plan: free # Change if needed
+    plan: free # Plan gratuito
