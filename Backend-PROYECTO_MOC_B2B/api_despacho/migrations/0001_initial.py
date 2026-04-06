@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'soporte',
-                'managed': False,
+                'managed': True,
             },
         ),
         migrations.CreateModel(
