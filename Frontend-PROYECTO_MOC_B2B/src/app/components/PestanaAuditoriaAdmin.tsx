@@ -5,16 +5,19 @@ import { AuditLog } from "../../types";
 interface AdminTabAuditLogsProps {
   auditLogs: AuditLog[];
   busqueda: string;
+  theme?: string;
 }
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
-export default function PestanaAuditoriaAdmin({ auditLogs, busqueda }: AdminTabAuditLogsProps) {
+export default function PestanaAuditoriaAdmin({ auditLogs, busqueda, theme = "dark" }: AdminTabAuditLogsProps) {
+  const isLight = theme === "light";
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-      <div className="glass-panel rounded-[2.5rem] border border-white/5 overflow-hidden">
+      <div className={cn("glass-panel rounded-[2.5rem] border overflow-hidden shadow-2xl", isLight ? "border-slate-200" : "border-white/5")}>
         <table className="w-full text-left border-collapse">
-          <thead className="bg-[#060d14] text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 border-b border-white/5 shadow-xl">
+          <thead className={cn("text-[9px] font-black uppercase tracking-[0.3em] border-b shadow-xl", isLight ? "bg-slate-100 text-slate-700 border-slate-200" : "bg-[#060d14] text-slate-500 border-white/5")}>
             <tr>
               <th className="px-8 py-6">FECHA/HORA</th>
               <th className="px-8 py-6">MODELO</th>
@@ -42,12 +45,12 @@ export default function PestanaAuditoriaAdmin({ auditLogs, busqueda }: AdminTabA
                 const objId = log.object_id || log.id_registro || log.id;
 
                 return (
-                  <tr key={i} className="border-t border-white/5 hover:bg-white/5 transition-all">
-                    <td className="px-8 py-5 text-slate-500 font-mono italic">
+                  <tr key={i} className={cn("border-t transition-all", isLight ? "border-slate-100 hover:bg-slate-50" : "border-white/5 hover:bg-white/5")}>
+                    <td className={cn("px-8 py-5 font-mono italic", isLight ? "text-slate-600" : "text-slate-500")}>
                       {formattedDate.includes("Invalid") ? ts : formattedDate}
                     </td>
                     <td className="px-8 py-5 uppercase font-black text-blue-500">{model}</td>
-                    <td className="px-8 py-5 text-slate-400">ID: {objId}</td>
+                    <td className={cn("px-8 py-5", isLight ? "text-slate-600" : "text-slate-400")}>ID: {objId}</td>
                     <td className="px-8 py-5 uppercase">
                       <span className={cn(
                         "px-3 py-1 rounded-lg text-[8px] font-black uppercase border",
@@ -58,14 +61,14 @@ export default function PestanaAuditoriaAdmin({ auditLogs, busqueda }: AdminTabA
                         {action}
                       </span>
                     </td>
-                    <td className="px-8 py-5 font-black text-white">{user}</td>
-                    <td className="px-8 py-5 text-slate-500 italic max-w-sm truncate" title={changes}>{changes}</td>
+                    <td className={cn("px-8 py-5 font-black", isLight ? "text-slate-900" : "text-white")}>{user}</td>
+                    <td className={cn("px-8 py-5 italic max-w-sm truncate", isLight ? "text-slate-700" : "text-slate-500")} title={changes}>{changes}</td>
                   </tr>
                 );
               })}
             {auditLogs.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-20 text-center opacity-40 font-black uppercase tracking-[0.2em]">
+                <td colSpan={6} className={cn("py-20 text-center font-black uppercase tracking-[0.2em]", isLight ? "text-slate-400" : "opacity-40")}>
                   Sincronizando registros...
                 </td>
               </tr>

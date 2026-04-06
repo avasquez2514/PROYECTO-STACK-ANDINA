@@ -232,16 +232,16 @@ const AdminDashboard = () => {
             theme === "light" ? "bg-[#F3F4F6] text-slate-800" : "bg-[#020810] text-slate-200"
         )}>
             <div className="relative z-10 flex h-screen overflow-hidden">
-                <SidebarAdmin 
-                  activeTab={activeTab} 
-                  setActiveTab={setActiveTab} 
-                  theme={theme} 
-                  setTheme={setTheme} 
-                  handleLogout={handleLogout} 
+                <SidebarAdmin
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    theme={theme}
+                    setTheme={setTheme}
+                    handleLogout={handleLogout}
                 />
 
                 <main className="flex-1 flex flex-col h-full bg-transparent overflow-hidden">
-                    <CabeceraAdmin 
+                    <CabeceraAdmin
                         activeTab={activeTab}
                         busqueda={busqueda}
                         setBusqueda={setBusqueda}
@@ -254,6 +254,16 @@ const AdminDashboard = () => {
                     <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
                         {activeTab === "dashboard" && (
                             <>
+                                <div className="mb-10 space-y-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-0.5 w-10 bg-emerald-500/50 rounded-full" />
+                                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.4em]">SISTEMA INTEGRAL SIMOC</span>
+                                    </div>
+                                    <h2 className="text-4xl font-black tracking-tighter text-white uppercase italic">
+                                        BIENVENIDO DE NUEVO, <span className="text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.3)]">ADMINISTRADOR</span>
+                                    </h2>
+                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest pl-1">Consola Maestra de Operaciones • {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                                </div>
                                 <TarjetasKPIAdmin loading={loading} totalStats={totalStats} theme={theme} />
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                                     <div className="lg:col-span-2 space-y-10">
@@ -270,7 +280,7 @@ const AdminDashboard = () => {
                                                     <div key={key} className={cn("flex items-center gap-2.5 px-3 py-1 rounded-full border border-white/10 shadow-inner", theme === 'light' ? 'bg-white' : 'bg-[#09101A]')}>
                                                         <div className={cn("w-2 h-2 rounded-full", cfg.dot.split(' ')[0])} />
                                                         <span className={cn("text-[9px] font-black", theme === 'light' ? 'text-slate-800' : 'text-slate-500')}>
-                                                          {asesores.filter(a => a.estado === key).length}
+                                                            {asesores.filter(a => a.estado === key).length}
                                                         </span>
                                                     </div>
                                                 ))}
@@ -289,77 +299,79 @@ const AdminDashboard = () => {
                         )}
 
                         {activeTab === "asesores" && (
-                            <PestanaAsesoresAdmin 
-                                loading={loading} 
-                                asesores={asesores} 
-                                busqueda={busqueda} 
-                                theme={theme} 
-                                setModalConfig={setModalConfig} 
-                                handleAction={handleAction} 
+                            <PestanaAsesoresAdmin
+                                loading={loading}
+                                asesores={asesores}
+                                busqueda={busqueda}
+                                theme={theme}
+                                setModalConfig={setModalConfig}
+                                handleAction={handleAction}
                             />
                         )}
 
                         {activeTab === "funcionarios" && (
-                            <PestanaFuncionariosAdmin 
-                                funcionarios={funcionarios} 
-                                busqueda={busqueda} 
-                                setModalConfig={setModalConfig} 
-                                handleAction={handleAction} 
+                            <PestanaFuncionariosAdmin
+                                funcionarios={funcionarios}
+                                busqueda={busqueda}
+                                setModalConfig={setModalConfig}
+                                handleAction={handleAction}
                             />
                         )}
 
                         {activeTab === "noticias" && (
-                            <PestanaNoticiasAdmin 
-                                noticias={noticias} 
-                                theme={theme} 
-                                setModalConfig={setModalConfig} 
-                                handleAction={handleAction} 
+                            <PestanaNoticiasAdmin
+                                noticias={noticias}
+                                theme={theme}
+                                setModalConfig={setModalConfig}
+                                handleAction={handleAction}
                             />
                         )}
 
                         {activeTab === "soportes" && (
-                            <PestanaSoportesAdmin 
-                                gestiones={gestiones} 
-                                busqueda={busqueda} 
+                            <PestanaSoportesAdmin
+                                gestiones={gestiones}
+                                busqueda={busqueda}
                             />
                         )}
 
                         {activeTab === "historico_asesores" && (
-                            <PestanaHistoricoAsesoresAdmin 
-                                asesores={asesores} 
-                                busqueda={busqueda} 
+                            <PestanaHistoricoAsesoresAdmin
+                                asesores={asesores}
+                                busqueda={busqueda}
+                                theme={theme}
                             />
                         )}
 
                         {activeTab === "audit_logs" && (
-                            <PestanaAuditoriaAdmin 
-                                auditLogs={auditLogs} 
-                                busqueda={busqueda} 
+                            <PestanaAuditoriaAdmin
+                                auditLogs={auditLogs}
+                                busqueda={busqueda}
+                                theme={theme}
                             />
                         )}
                     </div>
                 </main>
             </div>
 
-            <ModalesAdmin 
-                modalConfig={modalConfig} 
-                setModalConfig={setModalConfig} 
-                theme={theme} 
-                asesores={asesores} 
-                handleAction={handleAction} 
-                handleClearHistory={handleClearHistory} 
+            <ModalesAdmin
+                modalConfig={modalConfig}
+                setModalConfig={setModalConfig}
+                theme={theme}
+                asesores={asesores}
+                handleAction={handleAction}
+                handleClearHistory={handleClearHistory}
             />
 
             <style jsx global>{`
                 .glass-panel {
-                    background: ${theme === 'dark' ? '#040a1352' : '#eff1f2'};
+                    background: ${theme === 'dark' ? 'rgb(4 7 11 / 80%)' : '#eff1f2'};
                     border-radius: 12px;
-                    border: 1px solid ${theme === 'light' ? 'transparent' : 'rgba(255,255,255,0.05)'};
+                    border: 1px solid ${theme === 'light' ? 'transparent' : 'rgba(0, 0, 0, 0.05)'};
                     box-shadow: ${theme === 'light' ? '0 4px 6px -1px rgba(0,0,0,0.05)' : '0 4px 6px -1px rgba(0,0,0,0.4)'};
                 }
                 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'};
+                    background: ${theme === 'dark' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.1)'};
                     border-radius: 10px;
                 }
             `}</style>

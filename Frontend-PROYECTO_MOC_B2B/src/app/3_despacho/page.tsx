@@ -9,7 +9,7 @@ import TarjetasKPI from "../components/TarjetasKPI";
 import TablaSoporte from "../components/TablaSoporte";
 import ModalSoporte from "../components/ModalSoporte";
 import { Search, Megaphone, Clock } from "lucide-react";
-import { Soporte, AsesorSoporte } from "../../types";
+import { Soporte, AsesorSoporte, Noticia } from "../../types";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
@@ -27,7 +27,7 @@ export default function DespachoPage() {
   const [modalConfig, setModalConfig] = useState<{ id: number; text: string; title: string; evidencias?: string[] } | null>(null);
   const [activeChatSoporteId, setActiveChatSoporteId] = useState<number | null>(null);
   const [activeChatIncidente, setActiveChatIncidente] = useState<string>("");
-  const [noticia, setNoticia] = useState<any>(null);
+  const [noticia, setNoticia] = useState<Noticia | null>(null);
 
   useEffect(() => {
     setHasMounted(true);
@@ -96,7 +96,8 @@ export default function DespachoPage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/noticias/`);
       const data = await res.json();
-      if (data.length > 0) setNoticia(data[0]);
+      const activa = data.find((n: Noticia) => n.activa);
+      setNoticia(activa || null);
     } catch (e) {
       console.error(e);
     }
@@ -135,6 +136,7 @@ export default function DespachoPage() {
           setOpenAdvisorDropdown={setOpenAdvisorDropdown}
           handleCambioEstadoAsesor={handleCambioEstadoAsesor}
           variant="amber"
+          readOnly={true}
         />
 
         <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">

@@ -8,45 +8,49 @@ import TemporizadorEstado from "./TemporizadorEstado";
 interface PestanaHistoricoAsesoresAdminProps {
   asesores: AsesorSoporte[];
   busqueda: string;
+  theme?: string;
 }
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
 export default function PestanaHistoricoAsesoresAdmin({ 
   asesores,
-  busqueda
+  busqueda,
+  theme = "dark"
 }: PestanaHistoricoAsesoresAdminProps) {
   const [selectedAsesor, setSelectedAsesor] = useState<AsesorSoporte | null>(null);
 
-  // If we have a selected advisor, show their detailed history
+  const isLight = theme === "light";
+
   if (selectedAsesor) {
     const historial = (selectedAsesor as any).historial_estados || [];
     
     return (
       <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
-        {/* Header with back button */}
         <div className="flex items-center justify-between">
           <button 
             onClick={() => setSelectedAsesor(null)}
-            className="flex items-center gap-2 text-slate-500 hover:text-white transition-all group"
+            className={cn(
+              "flex items-center gap-2 transition-all group",
+              isLight ? "text-slate-600 hover:text-black" : "text-slate-500 hover:text-white"
+            )}
           >
             <ArrowLeft className="group-hover:-translate-x-1 transition-transform" />
             <span className="text-[10px] font-black uppercase tracking-widest">Volver al listado</span>
           </button>
           
           <div className="text-right">
-            <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">
+            <h3 className={cn("text-xl font-black uppercase italic tracking-tighter", isLight ? "text-slate-900" : "text-white")}>
               Historial de <span className="text-blue-500">{selectedAsesor.nombre_asesor}</span>
             </h3>
-            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Timeline de cambios de estado operativos</p>
+            <p className={cn("text-[9px] font-black uppercase tracking-widest", isLight ? "text-slate-600" : "text-slate-500")}>Timeline de cambios de estado operativos</p>
           </div>
         </div>
 
-        {/* History Table */}
-        <div className="glass-panel rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
+        <div className={cn("glass-panel rounded-[3rem] border overflow-hidden shadow-2xl", isLight ? "border-slate-200" : "border-white/5")}>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-[#060d14] text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 border-b border-white/5">
+              <thead className={cn("text-[9px] font-black uppercase tracking-[0.3em] border-b", isLight ? "bg-slate-100/50 text-slate-700 border-slate-200" : "bg-[#060d14] text-slate-500 border-white/5")}>
                 <tr>
                   <th className="px-10 py-7">ESTADO</th>
                   <th className="px-10 py-7">INICIO</th>
@@ -54,10 +58,10 @@ export default function PestanaHistoricoAsesoresAdmin({
                   <th className="px-10 py-7 text-right">DURACIÓN</th>
                 </tr>
               </thead>
-              <tbody className="text-[11px] font-bold divide-y divide-white/[0.02]">
+              <tbody className="text-[11px] font-bold divide-y divide-inherit">
                 {historial.length > 0 ? (
                   historial.map((h: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-blue-600/[0.03] transition-all group">
+                    <tr key={idx} className={cn("transition-all group", isLight ? "hover:bg-slate-50 border-slate-100" : "hover:bg-blue-600/[0.03] border-white/[0.02]")}>
                       <td className="px-10 py-6">
                         <div className="flex items-center gap-3">
                           <div className={cn("w-2 h-2 rounded-full", ESTADOS_CONFIG[h.estado]?.dot)} />
@@ -66,18 +70,18 @@ export default function PestanaHistoricoAsesoresAdmin({
                           </span>
                         </div>
                       </td>
-                      <td className="px-10 py-6 text-slate-400">{new Date(h.fecha_inicio).toLocaleString()}</td>
-                      <td className="px-10 py-6 text-slate-400">
-                        {h.fecha_fin ? new Date(h.fecha_fin).toLocaleString() : <span className="text-emerald-500 animate-pulse">ACTIVO</span>}
+                      <td className={cn("px-10 py-6", isLight ? "text-slate-800" : "text-slate-400")}>{new Date(h.fecha_inicio).toLocaleString()}</td>
+                      <td className={cn("px-10 py-6", isLight ? "text-slate-800" : "text-slate-400")}>
+                        {h.fecha_fin ? new Date(h.fecha_fin).toLocaleString() : <span className="text-emerald-500 animate-pulse font-black">ACTIVO</span>}
                       </td>
-                      <td className="px-10 py-6 text-right font-mono text-slate-300">
+                      <td className={cn("px-10 py-6 text-right font-mono", isLight ? "text-slate-900" : "text-slate-300")}>
                          {h.duracion_segundos ? formatSeconds(h.duracion_segundos) : <TemporizadorEstado lastChange={h.fecha_inicio} />}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className="px-10 py-20 text-center text-slate-600 italic uppercase text-[10px] tracking-widest font-black">
+                    <td colSpan={4} className={cn("px-10 py-20 text-center italic uppercase text-[10px] tracking-widest font-black", isLight ? "text-slate-400" : "text-slate-600")}>
                       No se encontraron registros históricos para este asesor
                     </td>
                   </tr>
@@ -90,7 +94,6 @@ export default function PestanaHistoricoAsesoresAdmin({
     );
   }
 
-  // Main listing of advisors with stats
   const filteredAsesores = asesores.filter(a => 
     !busqueda || 
     a.nombre_asesor.toUpperCase().includes(busqueda.toUpperCase()) || 
@@ -106,9 +109,11 @@ export default function PestanaHistoricoAsesoresAdmin({
             <div 
               key={asesor.id} 
               onClick={() => setSelectedAsesor(asesor)}
-              className="glass-panel p-8 rounded-[2.5rem] border border-white/5 hover:border-blue-500/30 transition-all cursor-pointer group hover:bg-white/[0.02] relative overflow-hidden"
+              className={cn(
+                "glass-panel p-8 rounded-[2.5rem] border transition-all cursor-pointer group relative overflow-hidden",
+                isLight ? "bg-white border-slate-200 shadow-xl hover:border-blue-500" : "border-white/5 hover:border-blue-500/30 hover:bg-white/[0.02]"
+              )}
             >
-              {/* Highlight background */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[60px] rounded-full -mr-16 -mt-16 group-hover:bg-blue-500/20 transition-all duration-1000" />
               
               <div className="relative space-y-6">
@@ -117,36 +122,41 @@ export default function PestanaHistoricoAsesoresAdmin({
                     <User size={20} />
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{asesor.login}</p>
+                    <p className={cn("text-[10px] font-black uppercase tracking-widest", isLight ? "text-blue-600" : "text-slate-500")}>{asesor.login}</p>
                     <div className="flex items-center gap-2 justify-end mt-1">
                       <div className={cn("w-1.5 h-1.5 rounded-full", ESTADOS_CONFIG[asesor.estado]?.dot)} />
-                      <span className="text-[8px] font-black uppercase text-slate-300">{ESTADOS_CONFIG[asesor.estado]?.label}</span>
+                      <span className={cn("text-[8px] font-black uppercase", isLight ? "text-slate-700" : "text-slate-300")}>{ESTADOS_CONFIG[asesor.estado]?.label}</span>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-black uppercase text-white truncate group-hover:text-blue-400 transition-colors">{asesor.nombre_asesor}</h4>
-                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">C.C. {asesor.cedula}</p>
+                  <h4 className={cn("text-sm font-black uppercase truncate group-hover:text-blue-500 transition-colors", isLight ? "text-slate-900" : "text-white")}>{asesor.nombre_asesor}</h4>
+                  <p className={cn("text-[9px] font-black uppercase tracking-widest mt-1", isLight ? "text-slate-600" : "text-slate-500")}>C.C. {asesor.cedula}</p>
                 </div>
 
-                <div className="pt-6 border-t border-white/5 flex items-center justify-between">
+                <div className={cn("pt-6 border-t flex items-center justify-between", isLight ? "border-slate-100" : "border-white/5")}>
                    <div className="flex items-center gap-2">
                       <History size={14} className="text-blue-500" />
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                      <span className={cn("text-[9px] font-black uppercase tracking-widest", isLight ? "text-slate-800" : "text-slate-400")}>
                         {(asesor as any).historial_estados?.length || 0} Registros
                       </span>
                    </div>
                    <div className="flex items-center gap-1.5">
-                      <Clock size={12} className="text-slate-500" />
-                      <span className="text-[9px] font-mono text-slate-500">
+                      <Clock size={12} className={cn(isLight ? "text-slate-700" : "text-slate-500")} />
+                      <span className={cn("text-[9px] font-mono", isLight ? "text-slate-900" : "text-slate-500")}>
                         <TemporizadorEstado lastChange={asesor.ultimo_cambio_estado} />
                       </span>
                    </div>
                 </div>
 
                 <div className="pt-2">
-                  <button className="w-full py-3 bg-blue-600/5 border border-blue-600/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-blue-500 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                  <button className={cn(
+                    "w-full py-3 border rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
+                    isLight 
+                       ? "bg-blue-50 border-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white" 
+                       : "bg-blue-600/5 border-blue-600/10 text-blue-500 group-hover:bg-blue-600 group-hover:text-white"
+                  )}>
                     Ver Timeline Detallado
                   </button>
                 </div>
@@ -154,8 +164,8 @@ export default function PestanaHistoricoAsesoresAdmin({
             </div>
           ))
         ) : (
-          <div className="col-span-full py-20 text-center glass-panel rounded-[3rem] border border-white/5">
-            <p className="text-xs font-black uppercase text-slate-500 tracking-widest">No se encontraron asesores para la búsqueda actual</p>
+          <div className={cn("col-span-full py-20 text-center glass-panel rounded-[3rem] border", isLight ? "border-slate-200" : "border-white/5")}>
+            <p className={cn("text-xs font-black uppercase tracking-widest", isLight ? "text-slate-500" : "text-slate-500")}>No se encontraron asesores para la búsqueda actual</p>
           </div>
         )}
       </div>

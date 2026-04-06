@@ -15,7 +15,7 @@ interface NoticiaPanelProps {
 }
 
 export default function PanelNoticias({ noticia, variant = "amber" }: NoticiaPanelProps) {
-  if (!noticia) return null;
+  if (!noticia || !noticia.activa) return null;
 
   const isEmerald = variant === "emerald";
   const accentColor = isEmerald ? "emerald-500" : "amber-500";

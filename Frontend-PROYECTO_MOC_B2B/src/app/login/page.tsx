@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ShieldCheck, Search, Activity, AlertTriangle, ChevronRight } from "lucide-react";
+import { Zap, User, Lock, Monitor, AlertTriangle, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { toast } from "sonner";
@@ -31,9 +31,8 @@ export default function LoginPage() {
 
             if (res.ok) {
                 const data = await res.json();
-                // Store token in cookie for middleware and API calls
-                Cookies.set("accessToken", data.access, { expires: 1 }); // 1 day
-                Cookies.set("refreshToken", data.refresh, { expires: 7 }); // 7 days
+                Cookies.set("accessToken", data.access, { expires: 1 });
+                Cookies.set("refreshToken", data.refresh, { expires: 7 });
                 Cookies.set("adminUser", credentials.user, { expires: 1 });
                 
                 toast.success("ACCESO AUTORIZADO");
@@ -51,32 +50,37 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6 relative overflow-hidden transition-all duration-700">
+        <div className="min-h-screen bg-[#020810] flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
             {/* Background Effects */}
-            <div className="fixed inset-0 pointer-events-none opacity-30">
-                <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-blue-600 blur-[180px] rounded-full animate-pulse" />
-                <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-emerald-600 blur-[180px] rounded-full animate-pulse" />
+            <div className="fixed inset-0 pointer-events-none opacity-20">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/10 blur-[150px] rounded-full animate-pulse" />
+                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-cyan-600/5 blur-[120px] rounded-full" />
             </div>
 
-            <div className="relative z-10 w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
-                <div className="glass-panel p-10 md:p-14 rounded-[3.5rem] border border-white/10 shadow-2xl space-y-10 group overflow-hidden">
-                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 blur-[60px] rounded-full group-hover:bg-blue-500/20 transition-all duration-1000" />
+            <div className="relative z-10 w-full max-w-sm animate-in fade-in zoom-in-95 duration-700">
+                <div className="glass-panel p-10 md:p-12 rounded-[2.5rem] border border-white/5 shadow-2xl space-y-8 group relative overflow-hidden">
+                    {/* Top Glow Decor */}
+                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-40 h-40 bg-emerald-500/10 blur-[40px] rounded-full group-hover:bg-emerald-500/20 transition-all duration-1000" />
 
-                    <div className="text-center space-y-3 relative">
-                        <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-blue-600/20 group-hover:scale-110 transition-transform duration-500">
-                            <ShieldCheck size={38} className="text-white" />
+                    <div className="text-center space-y-4 relative">
+                        <div className="w-16 h-16 bg-[#0a111a] border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto mb-6 relative group-hover:scale-110 transition-transform duration-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                            <div className="absolute inset-0 bg-emerald-500/10 rounded-full animate-ping opacity-20" />
+                            <Zap size={28} className="text-emerald-400 fill-emerald-400/20" />
                         </div>
-                        <h2 className="text-4xl font-black italic tracking-tighter uppercase text-white">
-                            ACCESO <span className="text-blue-500">ADMIN</span>
-                        </h2>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Administrator Terminal V1.0</p>
+                        <div className="space-y-1">
+                            <h2 className="text-2xl font-black tracking-tight text-white uppercase flex flex-col">
+                                <span>BIENVENIDO</span>
+                                <span className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]">ADMINISTRADOR</span>
+                            </h2>
+                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.4em] pt-1">Simoc System Terminal</p>
+                        </div>
                     </div>
 
                     <form onSubmit={handleLogin} className="space-y-6 relative">
                         <div className="space-y-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-4">USUARIO AUTORIZADO</label>
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">CÉDULA DE IDENTIDAD</label>
                             <div className="relative group/input">
-                                <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 group-focus-within/input:text-blue-500 transition-colors" />
+                                <User className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 group-focus-within/input:text-emerald-400 transition-colors" />
                                 <input
                                     type="text"
                                     value={credentials.user}
@@ -85,19 +89,19 @@ export default function LoginPage() {
                                         if (loginError) setLoginError(false);
                                     }}
                                     className={cn(
-                                        "w-full pl-16 pr-6 py-5 bg-slate-950/50 border rounded-3xl text-sm font-bold text-white outline-none transition-all placeholder:text-slate-800",
-                                        loginError ? "border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.1)]" : "border-white/5 focus:border-blue-500/50"
+                                        "w-full pl-14 pr-6 py-4 bg-slate-100/5 border rounded-2xl text-sm font-semibold text-white outline-none transition-all placeholder:text-slate-700",
+                                        loginError ? "border-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.05)]" : "border-white/5 focus:border-emerald-500/40"
                                     )}
-                                    placeholder="USUARIO"
+                                    placeholder="admin"
                                     required
                                 />
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-4">CONTRASEÑA DE ACCESO</label>
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">CONTRASEÑA DE ACCESO</label>
                             <div className="relative group/input">
-                                <Activity className="absolute left-6 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 group-focus-within/input:text-blue-500 transition-colors" />
+                                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 group-focus-within/input:text-emerald-400 transition-colors" />
                                 <input
                                     type="password"
                                     value={credentials.pass}
@@ -106,8 +110,8 @@ export default function LoginPage() {
                                         if (loginError) setLoginError(false);
                                     }}
                                     className={cn(
-                                        "w-full pl-16 pr-6 py-5 bg-slate-950/50 border rounded-3xl text-sm font-bold text-white outline-none transition-all placeholder:text-slate-800",
-                                        loginError ? "border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.1)]" : "border-white/5 focus:border-blue-500/50"
+                                        "w-full pl-14 pr-6 py-4 bg-slate-100/5 border rounded-2xl text-sm font-semibold text-white outline-none transition-all placeholder:text-slate-700",
+                                        loginError ? "border-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.05)]" : "border-white/5 focus:border-emerald-500/40"
                                     )}
                                     placeholder="••••••••"
                                     required
@@ -116,45 +120,50 @@ export default function LoginPage() {
                         </div>
 
                         {loginError && (
-                            <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-center gap-4 animate-shake shadow-[0_0_20px_rgba(244,63,94,0.1)]">
-                                <div className="w-10 h-10 bg-rose-500/20 rounded-xl flex items-center justify-center shrink-0">
-                                    <AlertTriangle size={18} className="text-rose-500" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black text-rose-500 uppercase tracking-tighter">Acceso Denegado</span>
-                                    <span className="text-[8px] font-bold text-rose-400/60 uppercase tracking-widest">Error de Autenticación</span>
-                                </div>
+                            <div className="p-3 bg-rose-500/5 border border-rose-500/20 rounded-xl flex items-center gap-3 animate-shake">
+                                <AlertTriangle size={14} className="text-rose-500" />
+                                <span className="text-[9px] font-black text-rose-500 uppercase tracking-tight">Credenciales Inválidas</span>
                             </div>
                         )}
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-6 bg-blue-600 hover:bg-blue-500 text-white rounded-[2rem] text-[11px] font-black uppercase tracking-[0.3em] transition-all shadow-2xl shadow-blue-600/30 active:scale-95 group/btn overflow-hidden relative disabled:opacity-50"
+                            className="w-full py-4 bg-[#0a111a] hover:bg-black text-white rounded-xl border border-emerald-500/30 hover:border-emerald-500 transition-all shadow-lg active:scale-[0.98] group/btn overflow-hidden relative disabled:opacity-50"
                         >
-                            <span className="relative z-10 flex items-center justify-center gap-3">
-                                {loading ? "AUTENTICANDO..." : "INGRESAR.."} <ChevronRight size={16} />
+                            <span className="relative z-10 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-[0.2em]">
+                                {loading ? "PROCESANDO..." : "INGRESAR A TERMINAL"} 
+                                <Monitor size={16} className="text-emerald-400" />
                             </span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:animate-shimmer" />
                         </button>
                     </form>
 
-                    <div className="pt-4 text-center">
-                        <button className="text-[9px] font-black text-slate-600 hover:text-blue-500 transition-colors tracking-widest uppercase">Forgotten Credentials? Contact SysAdmin</button>
-                    </div>
                 </div>
             </div>
 
+            <div className="mt-12 text-center opacity-30">
+                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-[0.5em]">© 2026 ADVANCED SECURITY - SIMOC</p>
+            </div>
+
             <style jsx global>{`
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
+                
+                body {
+                    font-family: 'Inter', sans-serif;
+                }
+
                 .glass-panel {
-                    background: rgba(15, 23, 42, 0.7);
-                    backdrop-filter: blur(20px);
-                    -webkit-backdrop-filter: blur(20px);
+                    background: rgb(4 7 11 / 80%);
+                    backdrop-filter: blur(24px);
+                    -webkit-backdrop-filter: blur(24px);
                 }
-                @keyframes shimmer {
-                    100% { transform: translateX(100%); }
+
+                @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    25% { transform: translateX(-4px); }
+                    75% { transform: translateX(4px); }
                 }
-                .animate-shimmer { animation: shimmer 2s infinite; }
+                .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
             `}</style>
         </div>
     );

@@ -28,9 +28,9 @@ export default function PestanaAsesoresAdmin({
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-      <div className="glass-panel rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
+      <div className={cn("glass-panel rounded-[3rem] border overflow-hidden shadow-2xl", isLight ? "border-slate-200" : "border-white/5")}>
         <table className="w-full text-left border-collapse">
-          <thead className="bg-[#060d14] text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 border-b border-white/5 shadow-xl">
+          <thead className={cn("text-[9px] font-black uppercase tracking-[0.3em] border-b shadow-xl", isLight ? "bg-slate-100 text-slate-700 border-slate-200" : "bg-[#060d14] text-slate-500 border-white/5")}>
             <tr>
               <th className="px-10 py-7">ID</th>
               <th className="px-10 py-7">NOMBRES Y APELLIDOS</th>
@@ -43,7 +43,7 @@ export default function PestanaAsesoresAdmin({
           <tbody className="text-[11px] font-bold">
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} className="border-t border-white/5">
+                <tr key={i} className={cn("border-t", isLight ? "border-slate-100" : "border-white/5")}>
                   <td colSpan={6} className="px-8 py-4">
                     <EsqueletoCarga className="h-6 w-full" />
                   </td>
@@ -53,13 +53,13 @@ export default function PestanaAsesoresAdmin({
               asesores
                 .filter(a => !busqueda || a.nombre_asesor.toUpperCase().includes(busqueda.toUpperCase()) || a.cedula.includes(busqueda))
                 .map((a) => (
-                  <tr key={a.id} className="border-t border-white/5 hover:bg-blue-600/[0.03] transition-all group relative">
-                    <td className="px-8 py-5 text-slate-500 font-mono">#{a.id}</td>
-                    <td className="px-8 py-5 uppercase font-black">{a.nombre_asesor}</td>
+                  <tr key={a.id} className={cn("border-t transition-all group relative", isLight ? "border-slate-50 hover:bg-slate-50" : "border-white/5 hover:bg-blue-600/[0.03]")}>
+                    <td className={cn("px-8 py-5 font-mono", isLight ? "text-slate-500" : "text-slate-500")}>#{a.id}</td>
+                    <td className={cn("px-8 py-5 uppercase font-black", isLight ? "text-slate-900" : "text-white")}>{a.nombre_asesor}</td>
                     <td className="px-8 py-5 uppercase tracking-tighter">
                       <div className="flex flex-col">
-                        <span>{a.login}</span>
-                        <span className="text-[8px] opacity-50">{a.cedula}</span>
+                        <span className={isLight ? "text-blue-600" : "text-white"}>{a.login}</span>
+                        <span className={cn("text-[8px] opacity-70", isLight ? "text-slate-500" : "text-slate-400")}>{a.cedula}</span>
                       </div>
                     </td>
                     <td className="px-8 py-5">
@@ -76,11 +76,11 @@ export default function PestanaAsesoresAdmin({
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                           <div className={cn("w-1.5 h-1.5 rounded-full", ESTADOS_CONFIG[a.estado]?.dot)} />
-                          <span className="uppercase text-[9px] font-black">{ESTADOS_CONFIG[a.estado]?.label || a.estado}</span>
+                          <span className={cn("uppercase text-[9px] font-black", isLight ? "text-slate-900" : "text-white")}>{ESTADOS_CONFIG[a.estado]?.label || a.estado}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 mt-1 border-t border-white/5 pt-1">
-                          <Clock size={10} className="text-slate-500" />
-                          <span className="text-[8px] font-mono text-slate-400">
+                        <div className={cn("flex items-center gap-1.5 mt-1 border-t pt-1", isLight ? "border-slate-100" : "border-white/5")}>
+                          <Clock size={10} className={cn(isLight ? "text-slate-500" : "text-slate-500")} />
+                          <span className={cn("text-[8px] font-mono", isLight ? "text-slate-800" : "text-slate-400")}>
                             <TemporizadorEstado lastChange={a.ultimo_cambio_estado} />
                           </span>
                         </div>

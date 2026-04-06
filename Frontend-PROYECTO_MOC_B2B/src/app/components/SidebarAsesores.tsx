@@ -23,6 +23,7 @@ interface AdvisorSidebarProps {
   setOpenAdvisorDropdown: (id: number | null) => void;
   handleCambioEstadoAsesor: (id: number, estado: string) => void;
   variant?: 'emerald' | 'amber';
+  readOnly?: boolean;
 }
 
 export default function SidebarAsesores({ 
@@ -30,7 +31,8 @@ export default function SidebarAsesores({
   openAdvisorDropdown, 
   setOpenAdvisorDropdown, 
   handleCambioEstadoAsesor,
-  variant = 'emerald'
+  variant = 'emerald',
+  readOnly = false
 }: AdvisorSidebarProps) {
   const isAmber = variant === 'amber';
   const mainColor = isAmber ? 'text-amber-400' : 'text-[#00e5a0]';
@@ -63,9 +65,11 @@ export default function SidebarAsesores({
             return (
               <div key={a.id} className="relative group flex flex-col items-center gap-2">
                 <button
-                  onClick={() => setOpenAdvisorDropdown(openAdvisorDropdown === a.id ? null : a.id)}
+                  onClick={() => !readOnly && setOpenAdvisorDropdown(openAdvisorDropdown === a.id ? null : a.id)}
                     className={cn(
-                      "relative w-16 h-16 rounded-full p-1 transition-all duration-500 hover:scale-110 active:scale-95 border-2 flex items-center justify-center",
+                      "relative w-16 h-16 rounded-full p-1 transition-all duration-500 border-2 flex items-center justify-center",
+                      !readOnly && "hover:scale-110 active:scale-95 cursor-pointer",
+                      readOnly && "cursor-default",
                       a.estado === 'EN_GESTION' ? `${borderColor} ${shadowClass}` :
                         a.estado === 'EN_DESCANSO' ? 'border-amber-400' :
                           a.estado === 'NO_DISPONIBLE' ? 'border-rose-500' : 'border-white/10'
