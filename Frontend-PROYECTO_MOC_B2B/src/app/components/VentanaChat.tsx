@@ -12,24 +12,53 @@ import imageCompression from 'browser-image-compression';
  * Permite adjuntar (y pegar) imágenes en base64 y reenviar mensajes a otros chats.
  */
 
+/**
+ * Interfaz para definir la estructura de un mensaje en el sistema de chat.
+ * @interface Message
+ */
 interface Message {
+    /** Identificador único del mensaje (opcional en creación local) */
     id?: number;
+    /** Nombre o rol del emisor */
     remitente: string;
+    /** Cuerpo del mensaje en texto plano */
     mensaje: string;
+    /** URL de la imagen adjunta o Base64 string */
     imagen?: string; // Base64
+    /** Timestamp formato ISO cuando se envió */
     fecha_hora?: string;
 }
 
+/**
+ * Propiedades del componente VentanaChat.
+ * @interface ChatWindowProps
+ */
 interface ChatWindowProps {
+    /** ID del caso de soporte actual */
     soporteId: number;
+    /** Nombre clave (código) del incidente en gestión */
     incidente: string;
+    /** Emisor (Ej: "SOPORTE", "TECNICO", "DESPACHO") */
     remitenteActual: string;
+    /** Nombre exacto del técnico que está enviando (opcional) */
     nombreRemitente?: string;
+    /** Función de cierre o destabbed del UI Modal de chat */
     onClose: () => void;
 }
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente VentanaChat - SIMOC Edition
+ * 
+ * Interfaz modal de chat full-screen. Se conecta mediante WebSockets (Django Channels) a
+ * la cola de un incidente particular. Permite copiado y envío de imágenes grandes
+ * con compresión web-worker on-the-fly (`browser-image-compression`) y reenvío de mensajes
+ * directos a otros casos creados.
+ * 
+ * @param {ChatWindowProps} props
+ * @returns {JSX.Element} Interfaz del chat modal
+ */
 const VentanaChat: React.FC<ChatWindowProps> = ({ soporteId, incidente, remitenteActual, nombreRemitente, onClose }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputMessage, setInputMessage] = useState("");

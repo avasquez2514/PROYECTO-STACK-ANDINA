@@ -5,17 +5,36 @@ import TemporizadorEstado from "./TemporizadorEstado";
 import { ESTADOS_CONFIG, PERFILES_CONFIG } from "../../constants";
 import { AsesorSoporte } from "../../types";
 
+/**
+ * Propiedades del componente PestanaAsesoresAdmin.
+ * @interface AdminTabAsesoresProps
+ */
 interface AdminTabAsesoresProps {
+  /** Indica si los datos de asesores están en proceso de carga. */
   loading: boolean;
+  /** Listado completo de asesores nivel 1. */
   asesores: AsesorSoporte[];
+  /** Término de filtrado por nombre o cédula. */
   busqueda: string;
+  /** Tema visual (light/dark). */
   theme: string;
+  /** Función para abrir modales de edición o creación. */
   setModalConfig: (config: any) => void;
+  /** Función genérica para ejecutar acciones CRUD (POST, PATCH, DELETE). */
   handleAction: (endpoint: string, method: string, id?: number, data?: any) => Promise<void>;
 }
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente PestanaAsesoresAdmin
+ * 
+ * Vista de tabla detallada para la gestión de Asesores de Nivel 1.
+ * Permite visualizar el estado en tiempo real, el tiempo transcurrido en dicho estado
+ * y acceder a acciones de edición, borrado o visualización de historial.
+ * 
+ * @param {AdminTabAsesoresProps} props
+ */
 export default function PestanaAsesoresAdmin({
   loading,
   asesores,

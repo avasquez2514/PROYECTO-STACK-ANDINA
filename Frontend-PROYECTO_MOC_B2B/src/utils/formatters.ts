@@ -1,3 +1,9 @@
+/**
+ * Decodifica un string JSON de observaciones técnicas.
+ * Si es un objeto, extrae los valores para presentarlos en línea.
+ * @param {string} obs - String de observaciones original.
+ * @returns {string} Texto formateado legible.
+ */
 export const decodificarObservaciones = (obs: string) => {
   if (!obs) return "--";
   try {
@@ -12,6 +18,12 @@ export const decodificarObservaciones = (obs: string) => {
   return obs;
 };
 
+/**
+ * Formatea un timestamp ISO a un formato amigable de fecha y hora local.
+ * Ejemplo: 21/04/2026 | 02:30:15 p. m.
+ * @param {string} f - Fecha en formato ISO o string reconocible.
+ * @returns {string} Fecha formateada.
+ */
 export const formatearFecha = (f: string) => {
   if (!f) return "---";
   try {
@@ -35,6 +47,11 @@ export const formatearFecha = (f: string) => {
   }
 };
 
+/**
+ * Toma una plantilla técnica en JSON y la convierte en un bloque de texto multilinea legible.
+ * @param {string} jsonString - Datos de la plantilla técnica.
+ * @returns {string} Texto con etiquetas y valores limpios.
+ */
 export const formatearPlantilla = (jsonString: string) => {
   try {
     const data = JSON.parse(jsonString);
@@ -49,6 +66,11 @@ export const formatearPlantilla = (jsonString: string) => {
     return jsonString;
   }
 };
+/**
+ * Convierte una cantidad de segundos a un formato de tiempo intuitivo (H M S).
+ * @param {number} seconds - Segundos transcurridos.
+ * @returns {string} Duración formateada (ej: 1h 30m).
+ */
 export const formatSeconds = (seconds: number) => {
   if (!seconds && seconds !== 0) return "---";
   if (seconds < 60) return `${seconds}s`;

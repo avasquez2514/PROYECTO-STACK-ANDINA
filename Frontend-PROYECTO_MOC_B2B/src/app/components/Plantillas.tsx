@@ -7,6 +7,7 @@
  * formularios dinámicos.
  */
 
+/** Campos requeridos para el cierre de tecnología GPON */
 export const plantillaCierreGPON = [
   { label: "Fecha", type: "text" },
   { label: "Inc", type: "text" },
@@ -28,6 +29,7 @@ export const plantillaCierreGPON = [
   { label: "Actividad realizada", type: "textarea" },
 ];
 
+/** Campos requeridos para el cierre de tecnología HFC */
 export const plantillaCierreHFC = [
   { label: "Fecha", type: "text" },
   { label: "Inc", type: "text" },
@@ -40,6 +42,7 @@ export const plantillaCierreHFC = [
 
 export const plantillaCierreFIBRA = [...plantillaCierreHFC];
 
+/** Campos requeridos para enrutar tecnología GPON */
 export const plantillaEnrutarGPON = [
   { label: "Fecha", type: "text" },
   { label: "Inc", type: "text" },
@@ -59,6 +62,7 @@ export const plantillaEnrutarGPON = [
   { label: "Actividad realizada", type: "textarea" },
 ];
 
+/** Campos requeridos para enrutar tecnología HFC */
 export const plantillaEnrutarHFC = [
   { label: "Fecha", type: "text" },
   { label: "Inc", type: "text" },
@@ -81,6 +85,7 @@ export const plantillaEnrutarHFC = [
   { label: "DQI", type: "text" },
 ];
 
+/** Campos requeridos para enrutar tecnología FIBRA */
 export const plantillaEnrutarFIBRA = [
   { label: "Fecha", type: "text" },
   { label: "Inc", type: "text" },
@@ -93,6 +98,7 @@ export const plantillaEnrutarFIBRA = [
   { label: "Actividad realizada", type: "textarea" },
 ];
 
+/** Campos para asesoría enfocada en parámetros técnicos */
 export const plantillaAsesoriaParametros = [
   { label: "Fecha", type: "text" },
   { label: "Inc", type: "text" },
@@ -103,6 +109,7 @@ export const plantillaAsesoriaParametros = [
   { label: "Actividad realizada", type: "textarea" },
 ];
 
+/** Campos para asesoría enfocada en infraestructura física */
 export const plantillaAsesoriaInfraestructura = [
   { label: "Fecha", type: "text" },
   { label: "Inc", type: "text" },

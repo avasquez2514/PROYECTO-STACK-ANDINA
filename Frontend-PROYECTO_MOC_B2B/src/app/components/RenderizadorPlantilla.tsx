@@ -19,13 +19,18 @@ type Campo = {
 };
 
 /**
- * Propiedades del componente PlantillaRender
- * @param titulo Nombre de la plantilla (ej: 'Plantilla Cierre GPON')
- * @param campos Array con la definición de etiquetas y tipos de input
- * @param formExtra Objeto de estado que almacena los valores de la plantilla
- * @param setFormExtra Función para actualizar el estado superior
- * @param nombreTecnico Nombre del técnico (para pre-llenado)
- * @param numeroInc Número de incidente (para pre-llenado)
+ * Componente RenderizadorPlantilla
+ * 
+ * Este componente se encarga de renderizar dinámicamente campos de entrada (input/textarea)
+ * basados en una "plantilla" técnica. Gestiona el rellenado automático de campos 
+ * comunes como Fecha, Incidente y Reparador para agilizar la gestión técnica.
+ * 
+ * @param {string} titulo - Encabezado visual de la sección.
+ * @param {Campo[]} campos - Array con la definición de etiquetas y tipos.
+ * @param {Record<string, string>} formExtra - Estado que almacena los valores.
+ * @param {React.Dispatch<React.SetStateAction<Record<string, string>>>} setFormExtra - Despachador de estado.
+ * @param {string} [nombreTecnico] - Nombre del técnico para pre-llenado.
+ * @param {string} [numeroInc] - Número de incidente para pre-llenado.
  */
 const RenderizadorPlantilla = ({
   titulo,

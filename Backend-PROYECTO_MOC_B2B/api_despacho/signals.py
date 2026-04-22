@@ -6,6 +6,11 @@ from .models import Soporte, AsesorSoporte, Noticia
 
 @receiver([post_save, post_delete], sender=Soporte)
 def notify_soporte_change(sender, instance, **kwargs):
+    """
+    Señal que se dispara al crear, actualizar o eliminar un registro de Soporte.
+    Envía una notificación vía WebSockets al grupo 'global_updates' para mantener
+    sincronizadas las tablas de los técnicos, agentes y el administrador.
+    """
     channel_layer = get_channel_layer()
     if channel_layer:
         async_to_sync(channel_layer.group_send)(

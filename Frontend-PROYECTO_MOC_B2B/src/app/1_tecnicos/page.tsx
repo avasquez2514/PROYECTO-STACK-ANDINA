@@ -19,11 +19,43 @@ import TerminalAutenticacion from "../components/TerminalAutenticacion";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Lista de pestañas principales para categorizar la vista.
+ * @constant {string[]}
+ */
 const TABS = ["REPARACIONES", "INSTALACIONES"];
+
+/**
+ * Tipos de gestión que un técnico de campo puede registrar.
+ * @constant {string[]}
+ */
 const GESTIONES = ["CIERRE", "ENRUTAR", "SOPORTE", "ASESORIA"];
+
+/**
+ * Diferentes tecnologías de red soportadas en la plataforma.
+ * @constant {string[]}
+ */
 const TECNOLOGIAS = ["GPON", "HFC", "FIBRA"];
+
+/**
+ * Regiones geográficas o torres disponibles para asignar al caso.
+ * @constant {string[]}
+ */
 const TORRES = ["ANTIOQUIA CENTRO", "ANTIOQUIA ORIENTE", "ATLANTICO-MAGDALENA-CESAR-LA GUAJIRA", "BOLIVAR", "BOGOTÁ", "EDATEL", "SANTANDERES"];
 
+/**
+ * Componente Principal `TecnicosPage`
+ * 
+ * Este componente representa el panel de control exclusivo para los técnicos de campo.
+ * Funcionalidades principales:
+ * 1. Autenticación técnica local.
+ * 2. Formulario lógico dinámico según el tipo de gestión, tecnología y sitio.
+ * 3. Inserción de evidencias fotográficas (exclusivo de "ENRUTAR").
+ * 4. Paginación e historial de casos activos creados por el propio técnico.
+ * 5. Integración con CHAT en vivo en caso de requerir soporte.
+ * 
+ * @returns {JSX.Element} Vista renderizada del terminal del técnico.
+ */
 export default function TecnicosPage() {
     const [hasMounted, setHasMounted] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -93,6 +125,11 @@ export default function TecnicosPage() {
         }
     }, []);
 
+    /**
+     * Muestra una alerta no intrusiva (notificación flotante) al usuario en pantalla.
+     * @param {string} message - El texto de la notificación.
+     * @param {'success' | 'error' | 'info'} [type='info'] - Define el color y el ícono de la notificación.
+     */
     const showNotify = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
         setNotification({ message, type });
         setTimeout(() => setNotification(null), 4000);
@@ -117,12 +154,22 @@ export default function TecnicosPage() {
         }
     }, [isAuthenticated, loggedUser]);
 
+    /**
+     * Oculta un caso de la lista local (Historial del técnico) almacenando el id en localStorage.
+     * Esto no borra el caso en la base de datos, solo lo quita de la vista del técnico.
+     * @param {number} id - El identificador del caso en soporte a ocultar.
+     */
     const ocultarCaso = (id: number) => {
         const newHidden = [...hiddenIds, id];
         setHiddenIds(newHidden);
         localStorage.setItem(`hidden_cases_${loggedUser}`, JSON.stringify(newHidden));
     };
 
+    /**
+     * Consulta el backend para cargar todo el historial de soporte.
+     * Luego se filtran sólo aquellos que coincidan con el técnico logueado actual (`loggedUser`),
+     * y extrae los nombres únicos de los incidentes para el autocompletado en el formulario.
+     */
     const cargarHistorial = async () => {
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/soporte/`);
@@ -143,6 +190,10 @@ export default function TecnicosPage() {
         }
     };
 
+    /**
+     * Maneja el proceso de actualización de contraseña llamando a la API (verbo PATCH)
+     * e informa al usuario sobre el resultado con notificaciones flotantes.
+     */
     const handleUpdatePassword = async () => {
         if (!newPassword || newPassword.length < 4) {
             showNotify("Mínimo 4 caracteres", "error");
@@ -170,12 +221,19 @@ export default function TecnicosPage() {
 
     // handleAuthSubmit moved to AuthTerminal
 
+    /**
+     * Borra la sesión local y resetea las variables de estado relacionadas a la autenticación.
+     */
     const handleLogout = () => {
         localStorage.removeItem("phoenix_tech_user");
         setIsAuthenticated(false);
         setHistorial([]);
     };
 
+    /**
+     * Limpia completamente todos los campos del formulario de creación de una nueva gestión,
+     * devolviendo el estado a su configuración inicial.
+     */
     const limpiarTerminal = () => {
         setArea(TABS[0]);
         setGestion(GESTIONES[0]);
@@ -190,6 +248,13 @@ export default function TecnicosPage() {
         setEvidencias([]);
     };
 
+    /**
+     * Captura, procesa y transmite los datos cargados en el formulario hacia la base de datos backend.
+     * Incorpora manejo de Evidencias (.jpeg/png) y mapeo inteligente de observaciones según el área.
+     * Utiliza FormData debido a que se requiere soporte Multipart (para carga de archivos).
+     * 
+     * @param {React.FormEvent} e - Evento de acción default de formulario
+     */
     const enviarGestion = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!incidente || !tecnologia || !torre) {

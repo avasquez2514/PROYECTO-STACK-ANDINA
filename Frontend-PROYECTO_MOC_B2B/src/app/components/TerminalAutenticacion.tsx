@@ -3,11 +3,27 @@
 import React, { useState } from "react";
 import { User, Lock, Monitor, Zap } from "lucide-react";
 
+/**
+ * Propiedades del componente TerminalAutenticacion.
+ * @interface AuthTerminalProps
+ */
 interface AuthTerminalProps {
+  /** Callback ejecutado tras un inicio de sesión exitoso, devuelve los datos del usuario. */
   onLoginSuccess: (user: any) => void;
+  /** Función para propagar alertas de sistema visuales */
   showNotify: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
+/**
+ * Componente TerminalAutenticacion
+ * 
+ * Interfaz tipo HUD / Terminal para el inicio de sesión o registro de técnicos de campo.
+ * Intercambia entre visualizaciones "LOGIN" y "REGISTER" operando directamente 
+ * contra los endpoints de la API en el backend para validar la cédula y la contraseña.
+ * 
+ * @param {AuthTerminalProps} props - Callbacks de exito y notificaciones.
+ * @returns {JSX.Element} Formulario visual de autenticación.
+ */
 export default function TerminalAutenticacion({ onLoginSuccess, showNotify }: AuthTerminalProps) {
   const [authMode, setAuthMode] = useState<"LOGIN" | "REGISTER">("LOGIN");
   const [authForm, setAuthForm] = useState({
@@ -18,6 +34,12 @@ export default function TerminalAutenticacion({ onLoginSuccess, showNotify }: Au
   });
   const [authLoading, setAuthLoading] = useState(false);
 
+  /**
+   * Procesa la solicitud al backend, dependiendo de si el modo actual es Registro o Acceso.
+   * Almacena localmente en localStorage al usuario de forma segura caso tenga respuestas 200 OK.
+   * 
+   * @param {React.FormEvent} e - Evento de formulario
+   */
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);

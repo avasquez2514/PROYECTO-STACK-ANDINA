@@ -4,10 +4,24 @@ import { Soporte } from "../../types";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Interfaz de propiedades KPI.
+ * @interface KPICardsProps
+ */
 interface KPICardsProps {
+  /** Lista cruda de todas las gestiones / soportes para el conteo automático. */
   datos: Soporte[];
 }
 
+/**
+ * Componente TarjetasKPI
+ * 
+ * Muestra las 4 tarjetas clave (Cards): Totales, Resueltos, Enrutados y Pendientes
+ * calculados iterando sobre la data del JSON de Soportes.
+ * 
+ * @param {KPICardsProps} props - Datos del endpoint principal.
+ * @returns {JSX.Element} Fila de 4 tarjetas glassmorphism oscuras.
+ */
 export default function TarjetasKPI({ datos }: KPICardsProps) {
   const stats = {
     total: datos.length,

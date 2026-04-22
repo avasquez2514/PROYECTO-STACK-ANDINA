@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Maximize, Minimize } from 'lucide-react';
 
+/**
+ * Componente BotonPantallaCompleta
+ * 
+ * Proporciona un control de UI para alternar el modo de pantalla completa
+ * de todo el documento (`document.documentElement`).
+ * 
+ * @returns {JSX.Element} Botón interactivo con ícono dinámico.
+ */
 const BotonPantallaCompleta = () => {
     const [isFullscreen, setIsFullscreen] = useState(false);
 

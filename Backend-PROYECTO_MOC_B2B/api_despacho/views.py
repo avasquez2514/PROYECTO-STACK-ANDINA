@@ -6,10 +6,20 @@ from .serializers import SoporteSerializer, AsesorSoporteSerializer, Funcionario
 
 
 def log_action(request, action_text):
+    """
+    Función utilitaria para registrar acciones administrativas en la tabla de auditoría.
+    
+    Busca el nombre del administrador en los datos de la petición o parámetros.
+    Si no se encuentra, registra la acción como originada por el 'SISTEMA'.
+    """
     usuario = request.data.get('admin_user') or request.query_params.get('admin_user') or 'SISTEMA'
     AuditLog.objects.create(usuario=usuario, accion=action_text)
 
 class SoporteViewSet(viewsets.ModelViewSet):
+    """
+    Conjunto de vistas para gestionar los registros de Soporte Técnico.
+    Maneja la creación de gestiones, carga de evidencias múltiples y auditoría de cambios.
+    """
     queryset = Soporte.objects.all()
     serializer_class = SoporteSerializer
 
@@ -36,6 +46,10 @@ class SoporteViewSet(viewsets.ModelViewSet):
         log_action(self.request, f"Actualizó gestión (ID: {instance.id}) - Estado: {instance.estado}")
 
 class AsesorSoporteViewSet(viewsets.ModelViewSet):
+    """
+    Gestiona la información y disponibilidad de los asesores (N1).
+    Permite actualizar estados (Disponible, Descanso, etc.) y limpiar historiales antiguos.
+    """
     queryset = AsesorSoporte.objects.all().order_by("id")
     serializer_class = AsesorSoporteSerializer
 
@@ -53,6 +67,10 @@ class AsesorSoporteViewSet(viewsets.ModelViewSet):
         return Response({'status': 'historial eliminado'})
 
 class FuncionarioViewSet(viewsets.ModelViewSet):
+    """
+    Maneja el registro y autenticación de los Técnicos de Campo (Funcionarios).
+    Incluye un método de login personalizado basado en cédula y contraseña.
+    """
     queryset = Funcionario.objects.all()
     serializer_class = FuncionarioSerializer
 
@@ -79,6 +97,10 @@ class FuncionarioViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Cédula no registrada'}, status=status.HTTP_401_UNAUTHORIZED)
 
 class ChatViewSet(viewsets.ModelViewSet):
+    """
+    API para la recuperación y envío de mensajes de chat.
+    Permite filtrar los mensajes por 'soporte_id' para cargar la conversación de un ticket específico.
+    """
     queryset = ChatMessage.objects.all()
     serializer_class = ChatMessageSerializer
 
@@ -90,6 +112,9 @@ class ChatViewSet(viewsets.ModelViewSet):
         return queryset
 
 class NoticiaViewSet(viewsets.ModelViewSet):
+    """
+    Gestiona las noticias y comunicados globales que se presentan en el frontend.
+    """
     queryset = Noticia.objects.all()
     serializer_class = NoticiaSerializer
 
@@ -105,6 +130,10 @@ class NoticiaViewSet(viewsets.ModelViewSet):
 from rest_framework.permissions import IsAuthenticated
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Vista de sólo lectura para que el administrador pueda consultar la bitácora de acciones del sistema.
+    Requiere autenticación de usuario (Token JWT/Session).
+    """
     permission_classes = [IsAuthenticated]
     queryset = AuditLog.objects.all().order_by("-fecha_hora")
     serializer_class = AuditLogSerializer

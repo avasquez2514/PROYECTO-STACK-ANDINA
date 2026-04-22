@@ -1,13 +1,28 @@
 import React from "react";
 import { Soporte } from "../../types";
 
+/**
+ * Propiedades de la vista de sumario de incidentes.
+ * @interface AdminTabSoportesProps
+ */
 interface AdminTabSoportesProps {
+  /** Listado masivo de todas las gestiones de soporte histórico. */
   gestiones: Soporte[];
+  /** Filtro de búsqueda por incidente o nombre de funcionario. */
   busqueda: string;
 }
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente PestanaSoportesAdmin
+ * 
+ * Tabla de consulta masiva para el histórico total de gestiones realizadas.
+ * Posee scroll lateral y vertical para manejar grandes volúmenes de datos,
+ * mostrando detalles técnicos, observaciones y el asesor asignado.
+ * 
+ * @param {AdminTabSoportesProps} props
+ */
 export default function PestanaSoportesAdmin({ gestiones, busqueda }: AdminTabSoportesProps) {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">

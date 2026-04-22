@@ -3,17 +3,39 @@
 import React from "react";
 import { Megaphone } from "lucide-react";
 
+/**
+ * Modelo fundamental de un aviso o noticia transmitida al cliente/despacho.
+ * @interface Noticia
+ */
 interface Noticia {
+  /** Texto del aviso / mensaje de difusión. */
   contenido: string;
+  /** Marca de tiempo de cuándo fue creada o difundida. */
   fecha_publicacion: string;
+  /** Bandera booleana si está visible/en rotación. */
   activa: boolean;
 }
 
+/**
+ * Propiedades inyectables al panel de Noticias.
+ * @interface NoticiaPanelProps
+ */
 interface NoticiaPanelProps {
+  /** Objeto de la noticia si existe, en caso contrario oculta el panel. */
   noticia: Noticia | null;
+  /** Paleta de color base visual, e.g. amber o emerald. */
   variant?: "amber" | "emerald";
 }
 
+/**
+ * Componente PanelNoticias
+ * 
+ * Cinta de visualización continua (Marquee) para exponer avisos
+ * a los usuarios logueados (como caídas masivas, advertencias).
+ * 
+ * @param {NoticiaPanelProps} props - El objeto de tipo Noticia a renderizar.
+ * @returns {JSX.Element | null} JSX Cinta transportadora o nulo si no hay noticia activa.
+ */
 export default function PanelNoticias({ noticia, variant = "amber" }: NoticiaPanelProps) {
   if (!noticia || !noticia.activa) return null;
 

@@ -5,14 +5,30 @@ import { ESTADOS_CONFIG } from "../../constants";
 import { formatSeconds } from "../../utils/formatters";
 import TemporizadorEstado from "./TemporizadorEstado";
 
+/**
+ * Propiedades del componente de Histórico detallado de Asesores.
+ * @interface PestanaHistoricoAsesoresAdminProps
+ */
 interface PestanaHistoricoAsesoresAdminProps {
+  /** Listado de asesores, los cuales deben contener internamente el array `historial_estados`. */
   asesores: AsesorSoporte[];
+  /** Filtro de búsqueda global. */
   busqueda: string;
+  /** Tema visual. */
   theme?: string;
 }
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente PestanaHistoricoAsesoresAdmin
+ * 
+ * Vista analítica que permite navegar por el historial de cambios de estado de cada asesor.
+ * Muestra una vista de cuadrícula (cards) inicial y permite profundizar en un "Timeline"
+ * detallado por asesor, calculando duraciones entre estados automáticamente.
+ * 
+ * @param {PestanaHistoricoAsesoresAdminProps} props
+ */
 export default function PestanaHistoricoAsesoresAdmin({ 
   asesores,
   busqueda,

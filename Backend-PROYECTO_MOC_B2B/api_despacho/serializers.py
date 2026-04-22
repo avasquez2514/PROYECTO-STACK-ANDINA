@@ -9,6 +9,11 @@ class SoporteEvidenciaSerializer(serializers.ModelSerializer):
 
 
 class SoporteSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el modelo Soporte.
+    Incluye lógica personalizada para recuperar el nombre completo del asesor N1
+    y anida la lista de evidencias fotográficas asociadas.
+    """
     nombre_n1_completo = serializers.SerializerMethodField()
 
     class Meta:
@@ -33,6 +38,10 @@ class HistorialEstadoAsesorSerializer(serializers.ModelSerializer):
 
 
 class AsesorSoporteSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el modelo AsesorSoporte.
+    Anida el historial de estados para visualización detallada en el panel administrativo.
+    """
     historial_estados = HistorialEstadoAsesorSerializer(many=True, read_only=True)
 
     class Meta:

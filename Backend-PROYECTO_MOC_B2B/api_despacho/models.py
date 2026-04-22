@@ -3,6 +3,12 @@ from django.db import models
 
 # 🔹 Tabla soporte (ya existe en la BD, no la modificamos)
 class Soporte(models.Model):
+    """
+    Modelo principal para la gestión de incidentes y soportes técnicos.
+    
+    Almacena la información de los técnicos en campo, el tipo de gestión,
+    el estado del ticket y los tiempos de atención (cronómetro).
+    """
     id = models.AutoField(primary_key=True)
     fecha_hora = models.DateTimeField()
     en_sitio = models.BooleanField()
@@ -67,6 +73,10 @@ class Soporte(models.Model):
         return f"{self.nombre} - {self.gestion}"
 
 class SoporteEvidencia(models.Model):
+    """
+    Archivos adjuntos (evidencias) asociados a un registro de Soporte.
+    Permite subir múltiples fotos/documentos por cada incidente.
+    """
     soporte = models.ForeignKey(Soporte, on_delete=models.CASCADE, related_name='evidencias_files')
     archivo = models.FileField(upload_to='evidencias/')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -77,6 +87,10 @@ class SoporteEvidencia(models.Model):
 
 # 🔹 Nueva tabla para asesores
 class AsesorSoporte(models.Model):
+    """
+    Representa al personal de Nivel 1 (Administrativo/Soporte).
+    Maneja el perfil operativo del asesor y su estado de disponibilidad actual.
+    """
     PERFILES = [
         ("EN_CIERRES", "En Cierres"),
         ("SOLO_SOPORTES", "Solo Soportes"),
@@ -144,6 +158,10 @@ class AsesorSoporte(models.Model):
 
 # 🔹 Nueva tabla para funcionarios
 class Funcionario(models.Model):
+    """
+    Representa a los técnicos de campo que utilizan el terminal móvil.
+    Almacena sus credenciales básicas para la autenticación local.
+    """
     id = models.AutoField(primary_key=True)
     nombre_funcionario = models.CharField(max_length=255, unique=True)
     cedula = models.CharField(max_length=20, unique=True)
@@ -158,6 +176,10 @@ class Funcionario(models.Model):
 
 # 🔹 Nueva tabla para el historial de estados de asesores
 class HistorialEstadoAsesor(models.Model):
+    """
+    Bitácora de tiempos y estados para cada Asesor de Soporte.
+    Se utiliza para generar reportes de productividad y tiempo en gestión.
+    """
     asesor = models.ForeignKey(AsesorSoporte, on_delete=models.CASCADE, related_name="historial_estados")
     estado = models.CharField(max_length=50)
     fecha_inicio = models.DateTimeField(auto_now_add=True)
@@ -174,6 +196,10 @@ class HistorialEstadoAsesor(models.Model):
 
 # 🔹 Tabla para mensajes de chat
 class ChatMessage(models.Model):
+    """
+    Mensajes individuales del chat en tiempo real asociados a un ticket.
+    Soporta texto e imágenes (Base64 procesadas por el frontend).
+    """
     soporte = models.ForeignKey(Soporte, on_delete=models.CASCADE, related_name='mensajes')
     remitente = models.CharField(max_length=255)
     mensaje = models.TextField()
@@ -189,6 +215,10 @@ class ChatMessage(models.Model):
 
 
 class Noticia(models.Model):
+    """
+    Anuncios globales del sistema. Aparecen en los banners de las consolas
+    para informar a todo el personal sobre novedades importantes.
+    """
     id = models.AutoField(primary_key=True)
     contenido = models.TextField()
     fecha_publicacion = models.DateTimeField(auto_now_add=True)
@@ -202,6 +232,10 @@ class Noticia(models.Model):
         return self.contenido[:50]
 
 class AuditLog(models.Model):
+    """
+    Registro histórico de acciones críticas realizadas por el Administrador.
+    Sirve para la trazabilidad de cambios en usuarios, estados o eliminaciones.
+    """
     usuario = models.CharField(max_length=255)
     accion = models.TextField()
     fecha_hora = models.DateTimeField(auto_now_add=True)

@@ -7,6 +7,13 @@ from channels.db import database_sync_to_async
 from .models import ChatMessage, Soporte
 
 class ChatConsumer(AsyncWebsocketConsumer):
+    """
+    Gestiona la comunicación bidireccional en tiempo real para el Chat.
+    
+    Permite el envío de mensajes de texto e imágenes procesadas como Base64,
+    los cuales se persisten en la base de datos y se retransmiten a todos
+    los participantes suscritos a la sala (room) del ticket.
+    """
     async def connect(self):
         self.soporte_id = self.scope['url_route']['kwargs']['soporte_id']
         self.room_group_name = f'chat_{self.soporte_id}'
@@ -94,6 +101,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
 class DataUpdateConsumer(AsyncWebsocketConsumer):
+    """
+    Transmisor global de actualizaciones de datos.
+    
+    Escucha cambios en los modelos de Django (vía signals) y notifica al 
+    Frontend para que refresque las tablas o KPIs de forma instantánea
+    sin necesidad de recargar la página.
+    """
     async def connect(self):
         await self.channel_layer.group_add("global_updates", self.channel_name)
         await self.accept()

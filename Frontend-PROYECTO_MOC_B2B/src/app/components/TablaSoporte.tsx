@@ -10,21 +10,47 @@ const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Bool
 
 const estadosGestion = ["En gestión", "Enrutado", "Resuelto", "Mal Escalado"];
 
+/**
+ * Definición de Propiedades para la Tabla Principal.
+ * @interface SoporteTableProps
+ */
 interface SoporteTableProps {
+  /** Bandera de carga para renderizar esqueletos visuales (Skeleton). */
   loading: boolean;
+  /** Array de gestiones filtradas listas para renderizarse. */
   datosFiltrados: Soporte[];
+  /** Controla que fila y qué menú emergente (Dropdown) está desplegado actualmente. */
   openDropdownId: { id: number; type: 'login' | 'estado' } | null;
+  /** Mutador del estado del Dropdown activo. */
   setOpenDropdownId: (v: { id: number; type: 'login' | 'estado' } | null) => void;
+  /** Listado de asesores de nivel 1 listos para recibir asignación a un caso. */
   asesoresSoporte: AsesorSoporte[];
+  /** Acción PATCH que impacta en la BD para cambiar celular, login, estado, etc. */
   actualizarSoporte: (id: number, field: string, value: any) => void;
+  /** Activa el modal del websocket Chat para un caso en específico. */
   setActiveChatSoporteId: (id: number) => void;
+  /** Asigna el código de incidente activo en la barra superior del Chat. */
   setActiveChatIncidente: (inc: string) => void;
+  /** Levanta el modal para previsualizar/editar la "Plantilla" recopilada. */
   setModalConfig: (config: { id: number; text: string; title: string; evidencias?: string[] }) => void;
+  /** Variantes visuales para renderizado (emerald para Soporte, amber para Despacho). */
   variant?: 'emerald' | 'amber';
+  /** Si es true renderiza la columna exclusíva de botones "PRIORIDAD ALTA". */
   showPrioridad?: boolean;
+  /** Deshabilita la edición y mutación en Dropdowns y botones. (Ej. Vistas de sólo lectura) */
   readOnly?: boolean;
 }
 
+/**
+ * Componente TablaSoporte
+ * 
+ * Es el núcleo del panel de visualización tanto para Asesores, Despadores como Administradores.
+ * Mapea y renderiza todo el array de datos de `Soporte`, ofreciendo menús en línea (Dropdowns) para 
+ * reasignar casos, editar el estado, copiar plantillas de evidencias y arrancar el chat.
+ * 
+ * @param {SoporteTableProps} props
+ * @returns {JSX.Element} Grid / Tabla de gestiones unificada
+ */
 export default function TablaSoporte({
   loading,
   datosFiltrados,

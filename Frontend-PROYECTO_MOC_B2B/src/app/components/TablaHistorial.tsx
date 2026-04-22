@@ -5,18 +5,42 @@ import { MessageSquare, Trash2, Hash, FileText } from "lucide-react";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Propiedades requeridas para el componente TablaHistorial
+ * @interface HistorialTableProps
+ */
 interface HistorialTableProps {
+    /** Lista completa de elementos en el historial actual */
     historial: any[];
+    /** Estado booleano de indicador de carga desde el servidor */
     loading: boolean;
+    /** Array de IDs numéricos que definen qué registros ocultar en la vista local */
     hiddenIds: number[];
+    /** Consulta para filtrar por número de incidente */
     searchIncidente: string;
+    /** Manejador para actualizar el input de búsqueda de incidente */
     setSearchIncidente: (val: string) => void;
+    /** Consulta de fecha utilizada en el filtro de historial */
     searchFecha: string;
+    /** Manejador para actualizar la fecha de filtro */
     setSearchFecha: (val: string) => void;
+    /** Callback para abrir el modal/ventana de chat asociada a un incidente y caso particular */
     abrirChat: (id: number, incidente: string) => void;
+    /** Callback para almacenar en localStorage y el estado local un ID de caso para ocultarlo de la vista */
     ocultarCaso: (id: number) => void;
 }
 
+/**
+ * Componente TablaHistorial
+ * 
+ * Renderiza el historial de casos y gestiones del técnico o administrador actual.
+ * Proporciona soporte para búsqueda (filtrado) por incidente/fecha, ocultamiento 
+ * de reportes locales, diseño resposivo (tabla vs tarjetas) y notificaciones de
+ * mensajes nuevos pendientes.
+ * 
+ * @param {HistorialTableProps} props Propiedades pasadas al componente.
+ * @returns {JSX.Element} Vista con los reportes listados.
+ */
 const TablaHistorial = ({
     historial,
     loading,

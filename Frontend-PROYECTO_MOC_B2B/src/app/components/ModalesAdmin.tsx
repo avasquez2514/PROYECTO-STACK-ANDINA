@@ -5,21 +5,42 @@ import { ESTADOS_CONFIG, PERFILES_CONFIG } from "../../constants";
 import { formatSeconds } from "../../utils/formatters";
 import { AsesorSoporte } from "../../types";
 
+/**
+ * Propiedades del Gestor de Modales (Administración).
+ * @interface AdminModalsProps
+ */
 interface AdminModalsProps {
+  /** Configuración cargada del modal: tipo (entidad), modo (nuevo/editar) y los datos persistidos. */
   modalConfig: {
     type: 'asesor' | 'funcionario' | 'soporte' | 'asesor_history' | 'noticia';
     mode: 'add' | 'edit';
     data?: any;
   } | null;
+  /** Función para mutar o cerrar la vista de configuración del modal. */
   setModalConfig: (config: any) => void;
+  /** Tema escogido (oscuro/claro) aplicado de forma transversal en Admin. */
   theme: string;
+  /** JSON de la nómina de todos los asesores para Dropdowns o listados internos. */
   asesores: AsesorSoporte[];
+  /** Wrapper/Hook asíncrono para abstraer mutaciones POST/PATCH a la DB. */
   handleAction: (endpoint: string, method: string, id?: number, data?: any) => Promise<void>;
+  /** Callback para limpiar o resetear el historial de estados de nivel 1. */
   handleClearHistory: (asesorId: number) => Promise<void>;
 }
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente ModalesAdmin
+ * 
+ * Centralizador / Enrutador de modales en el Panel de Administrador.
+ * En función de la propiedad `type` del `modalConfig`, renderiza visualmente
+ * diferentes formularios (crear/editar asesores, despachadores, noticias o casos).
+ * Es un "God Component" visual aislado.
+ * 
+ * @param {AdminModalsProps} props - Variables estado/setters para hidratar al hijo renderizado.
+ * @returns {JSX.Element | null} Formulario central en PopUp Glassmorph.
+ */
 export default function ModalesAdmin({
   modalConfig,
   setModalConfig,

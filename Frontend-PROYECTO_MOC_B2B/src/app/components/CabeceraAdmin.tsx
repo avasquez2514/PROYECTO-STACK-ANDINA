@@ -2,18 +2,39 @@ import React from "react";
 import { Zap, Plus, Search, FileText, FileSpreadsheet } from "lucide-react";
 import BotonPantallaCompleta from "./BotonPantallaCompleta";
 
+/**
+ * Propiedades inyectadas a la cabecera del dashboard de Administración.
+ * @interface AdminHeaderProps
+ */
 interface AdminHeaderProps {
+  /** Tab activo actual en uso dentro del Admin (Dashboard, Asesores, Funcionarios, etc.) */
   activeTab: string;
+  /** Estado levantado al padre para la barra de búsqueda nativa. */
   busqueda: string;
+  /** Hook despachador de actualizaciones de búsqueda. */
   setBusqueda: (v: string) => void;
+  /** Trigger para levantar los modales (Añadir o Editar perfiles). */
   setModalConfig: (config: any) => void;
+  /** Función que activa la exportación en PDF. */
   exportToPDF: () => void;
+  /** Función que activa la exportación en archivo Excel/CSV. */
   exportToExcel: () => void;
+  /** Validador de Hidratación del sistema SSR en Next.js. */
   hasMounted: boolean;
 }
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente CabeceraAdmin
+ * 
+ * Barra principal estática/stickied superior para la pantalla de Administrador.
+ * Aloja controles utilitarios como Exportación PDF/Excel, Búsqueda global, 
+ * un botón dinámico "AGREGAR [+]" y reloj o estado en línea del Administrador.
+ * 
+ * @param {AdminHeaderProps} props - Variables y callbacks mapeados desde el Layout Admin.
+ * @returns {JSX.Element} Navbar glassmorphic oscura para administradores.
+ */
 export default function CabeceraAdmin({
   activeTab,
   busqueda,

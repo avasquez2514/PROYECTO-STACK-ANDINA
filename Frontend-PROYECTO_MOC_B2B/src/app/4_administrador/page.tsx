@@ -29,6 +29,16 @@ import { formatearFecha } from "../../utils/formatters";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente Principal `AdminDashboard` (Administrador)
+ * 
+ * Interfaz maestra o "Consola" que permite visualizar y gestionar todos los registros
+ * del sistema SIMOC. Controla el CRUD de técnicos (funcionarios), asesores de nivel 1,
+ * novedades y logs de auditoría general. 
+ * Además, exporta reportes en CSV/Excel y PDF, y monitoriza conexiones en vivo vía WebSockets.
+ * 
+ * @returns {JSX.Element} Aplicación Dashboard embebida
+ */
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState("dashboard");
     const [asesores, setAsesores] = useState<AsesorSoporte[]>([]);
@@ -69,6 +79,10 @@ const AdminDashboard = () => {
         }
     }, [isLoggedIn]);
 
+    /**
+     * Trae y asigna de manera paralela todos los conjuntos de datos masivos.
+     * Realiza un `Promise.all` para resolver Asesores, Gestiones, Funcionarios, Noticias y AuditLogs.
+     */
     const fetchData = async () => {
         const token = Cookies.get("accessToken");
         if (!token) return;
@@ -103,6 +117,10 @@ const AdminDashboard = () => {
         }
     };
 
+    /**
+     * Termina la sesion del Admin removiendo cookies 
+     * e interceptando via Router al `/login`.
+     */
     const handleLogout = () => {
         Cookies.remove("accessToken");
         Cookies.remove("refreshToken");
@@ -110,6 +128,15 @@ const AdminDashboard = () => {
         router.push("/login");
     };
 
+    /**
+     * Hook Asíncrono orquestador de las mutaciones DB.
+     * Enruta peticiones CREADAS, ACTUALIZADAS (PATCH) o ELIMINADAS basadas
+     * en el `type` u origen (Asesores, Funcionarios, etc.).
+     * @param {string} type - Colección/endpoint en la REST API (e.x "asesores")
+     * @param {string} action - Verbo HTTP ('POST', 'PATCH', 'DELETE')
+     * @param {number} [id] - Parámetro de segmento PK de registro
+     * @param {any} [data] - Objeto a procesar como Payload/Body
+     */
     const handleAction = async (type: string, action: string, id?: number, data?: any) => {
         const token = Cookies.get("accessToken");
         const user = Cookies.get("adminUser") || 'ADMIN';
@@ -138,6 +165,11 @@ const AdminDashboard = () => {
         }
     };
 
+    /**
+     * Dispara un borrado forzado de los históricos de logs temporales
+     * guardados para un usuario Asesor puntual.
+     * @param {number} asesorId - PK del asesor.
+     */
     const handleClearHistory = async (asesorId: number) => {
         if (!confirm("¿ESTÁ SEGURO DE VACIAR TODO EL HISTORIAL DE ESTE ASESOR?")) return;
 
@@ -160,6 +192,12 @@ const AdminDashboard = () => {
         }
     };
 
+    /**
+     * Evalúa métricas pasivas sobre un `login` determinado
+     * (Cuantas resoluciones tiene vs Casos asignados a su número).
+     * @param {string} login - Usuario (Ej. `MRODRIGUEZ`)
+     * @returns {Object} {total, cierres, soportes} counts
+     */
     const getStatsPerAsesor = (login: string) => {
         const userGestiones = gestiones.filter(g => g.login_n1 === login || g.nombre === login);
         return {
@@ -179,6 +217,10 @@ const AdminDashboard = () => {
         enrutados: gestiones.filter(g => g.estado === "Enrutado").length
     };
 
+    /**
+     * Función delegada para invocar SheetJS (XLSX).
+     * Genera un volcado de las Gestiones renderizándolas en crudo hacia un EXCEL.
+     */
     const exportToExcel = () => {
         if (gestiones.length === 0) return;
         const dataParaExcel = gestiones.map(g => ({
@@ -198,6 +240,10 @@ const AdminDashboard = () => {
         XLSX.writeFile(wb, `reporte_soporte_${new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
+    /**
+     * Función delegada para invocar `jsPDF`.
+     * Levanta una grilla (autoTable) con cabeceras estrictas sobre métricas directas y compila.
+     */
     const exportToPDF = () => {
         if (gestiones.length === 0) return;
         const doc = new jsPDF('landscape');

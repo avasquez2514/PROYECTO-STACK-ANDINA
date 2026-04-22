@@ -1,8 +1,14 @@
 import React from "react";
 import EsqueletoCarga from "./EsqueletoCarga";
 
+/**
+ * Propiedades del componente TarjetasKPIAdmin.
+ * @interface AdminKPICardsProps
+ */
 interface AdminKPICardsProps {
+  /** Switch de renderizado para mostrar esqueletos de carga animados. */
   loading: boolean;
+  /** Objeto derivado con sumatorias estadísticas matemáticas (resueltos, totales, etc.) */
   totalStats: {
     total: number;
     cierres: number;
@@ -12,9 +18,20 @@ interface AdminKPICardsProps {
     resueltos: number;
     enrutados: number;
   };
+  /** Configuración visual del entorno general (dark mode | light mode) */
   theme: string;
 }
 
+/**
+ * Componente TarjetasKPIAdmin
+ * 
+ * Tarjetero de estadísticas numéricas exclusivo de la vista de resumen (Dashboard Admin).
+ * Posee iteradores que mapean y construyen visualmente métricas de alto nivel a partir
+ * de la propiedad inyectada `totalStats`.
+ * 
+ * @param {AdminKPICardsProps} props
+ * @returns {JSX.Element} Fila de tarjetas KPI con íconos emoji + contadores numéricos grandes.
+ */
 export default function TarjetasKPIAdmin({ loading, totalStats, theme }: AdminKPICardsProps) {
   const dashboardStats = [
     { label: "CASOS TOTALES", value: totalStats.total, icon: "📁", isEmoji: true, color: "text-blue-500", glow: "rgba(59, 130, 246, 0.4)" },

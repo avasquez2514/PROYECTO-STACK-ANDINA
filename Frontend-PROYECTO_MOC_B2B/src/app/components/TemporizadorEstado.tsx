@@ -1,9 +1,22 @@
 import React, { useState, useEffect } from "react";
 
+/**
+ * Propiedades para el temporizador de tiempo relativo.
+ * @interface StatusTimerProps
+ */
 interface StatusTimerProps {
+  /** Fecha/Hora del último cambio registrado (formato ISO). */
   lastChange: string;
 }
 
+/**
+ * Componente TemporizadorEstado
+ * 
+ * Un componente ligero que muestra cuánto tiempo ha transcurrido desde un evento.
+ * Formatea automáticamente el texto en "segundos", "minutos" o "horas" dependiendo de la duración.
+ * 
+ * @param {StatusTimerProps} props
+ */
 const TemporizadorEstado = ({ lastChange }: StatusTimerProps) => {
   const [display, setDisplay] = useState("0s");
 

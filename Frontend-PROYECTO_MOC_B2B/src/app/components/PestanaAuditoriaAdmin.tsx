@@ -2,14 +2,29 @@ import React from "react";
 
 import { AuditLog } from "../../types";
 
+/**
+ * Propiedades del terminal de Auditoría.
+ * @interface AdminTabAuditLogsProps
+ */
 interface AdminTabAuditLogsProps {
+  /** Colección de logs capturados por el middleware de auditoría del backend. */
   auditLogs: AuditLog[];
+  /** Filtro de búsqueda por modelo o usuario administrador. */
   busqueda: string;
+  /** Tema actual del sistema. */
   theme?: string;
 }
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente PestanaAuditoriaAdmin
+ * 
+ * Muestra una bitácora detallada de cada cambio realizado en la base de datos (Audit Logs).
+ * Identifica quién realizó el cambio (admin_user), sobre qué modelo y qué acción tomó (CREATE/UPDATE/DELETE).
+ * 
+ * @param {AdminTabAuditLogsProps} props
+ */
 export default function PestanaAuditoriaAdmin({ auditLogs, busqueda, theme = "dark" }: AdminTabAuditLogsProps) {
   const isLight = theme === "light";
 

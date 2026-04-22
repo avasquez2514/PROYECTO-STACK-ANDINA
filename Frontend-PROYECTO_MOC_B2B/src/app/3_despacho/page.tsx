@@ -13,6 +13,17 @@ import { Soporte, AsesorSoporte, Noticia } from "../../types";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente Principal `DespachoPage`
+ * 
+ * Interfaz de consola enfocada en el rol de "DESPACHO".
+ * Este panel permite monitorear de forma pasiva (readOnly) todas las gestiones
+ * reportadas por los técnicos y el estado de los asesores, además de visualizar alertas y usar el chat.
+ * 
+ * Soporta WebSockets para la actualización en tiempo real de gestiones, asesores y noticias.
+ * 
+ * @returns {JSX.Element} Vista renderizada del dashboard de Despacho.
+ */
 export default function DespachoPage() {
   const [datos, setDatos] = useState<Soporte[]>([]);
   const [asesoresSoporte, setAsesoresSoporte] = useState<AsesorSoporte[]>([]);
@@ -46,6 +57,10 @@ export default function DespachoPage() {
     return () => socket.close();
   }, []);
 
+  /**
+   * Obtiene la nómina de todos los incidentes de soporte registrados.
+   * Ordenados por ID de manera ascendente. 
+   */
   const cargarDatos = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/soporte/`);
@@ -58,6 +73,12 @@ export default function DespachoPage() {
     }
   };
 
+  /**
+   * Refleja cambios en el estado de una gestión (resolviendo llamadas a la API vía PATCH).
+   * @param {number} id - Identificador de la gestión.
+   * @param {string} field - Propiedad del modelo a modificar.
+   * @param {any} value - Valor nuevo a asignar.
+   */
   const handleUpdateSoporte = async (id: number, field: string, value: any) => {
     try {
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/soporte/${id}/`, {
@@ -70,6 +91,9 @@ export default function DespachoPage() {
     }
   };
 
+  /**
+   * Carga la lista completa de asesores y su estado operativo actual.
+   */
   const cargarAsesores = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/asesores/`);
@@ -80,6 +104,11 @@ export default function DespachoPage() {
     }
   };
 
+  /**
+   * Modifica el estado actual de un asesor conectado (Ej. Disponible, Break, etc.).
+   * @param {number} id - ID del asesor en la base de datos.
+   * @param {string} nuevoEstado - Etiqueta asignada como estado actual.
+   */
   const handleCambioEstadoAsesor = async (id: number, nuevoEstado: string) => {
     try {
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/asesores/${id}/`, {

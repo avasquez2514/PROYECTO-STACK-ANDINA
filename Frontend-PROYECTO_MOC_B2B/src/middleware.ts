@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+/**
+ * Middleware Global de Next.js
+ * 
+ * Este interceptor se ejecuta en el Edge y valida la existencia del `accessToken`
+ * antes de permitir el acceso a rutas restringidas (como el Admin).
+ * Si el usuario no está autenticado, realiza un "Force Redirect" hacia `/login`.
+ * 
+ * @param {NextRequest} request - Objeto de petición entrante.
+ * @returns {NextResponse} Respuesta de navegación (Next o Redirect).
+ */
 export function middleware(request: NextRequest) {
     const isAdminPage = request.nextUrl.pathname.startsWith('/4_administrador');
     const token = request.cookies.get('accessToken')?.value;

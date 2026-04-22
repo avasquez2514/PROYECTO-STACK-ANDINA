@@ -4,6 +4,10 @@ import { AsesorSoporte } from "../../types";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Estilos según el estado operativo en vivo del Asesor.
+ * @constant estadosAsesorConfig
+ */
 export const estadosAsesorConfig: Record<string, { bg: string, dot: string, border: string }> = {
   "EN_GESTION": { bg: "bg-emerald-500/10 text-emerald-500", dot: "bg-emerald-500 shadow-emerald-500/50", border: "border-emerald-500/20" },
   "EN_DESCANSO": { bg: "bg-slate-500/10 text-slate-400", dot: "bg-slate-500 shadow-slate-500/50", border: "border-white/5" },
@@ -11,21 +15,44 @@ export const estadosAsesorConfig: Record<string, { bg: string, dot: string, bord
   "CASO_COMPLEJO": { bg: "bg-amber-500/10 text-amber-500", dot: "bg-amber-500 shadow-amber-500/50", border: "border-amber-500/20" }
 };
 
+/**
+ * Mapeo de perfiles asignables de atención e implicaciones visuales
+ * @constant PERFILES_CONFIG
+ */
 export const PERFILES_CONFIG: any = {
   "EN_CIERRES": { label: "Cierres", color: "text-amber-400", bg: "bg-amber-400/10" },
   "SOLO_SOPORTES": { label: "Soporte", color: "text-amber-400", bg: "bg-amber-400/10" },
   "TODO": { label: "Todo gestión:", color: "text-amber-400", bg: "bg-amber-400/10" }
 };
 
+/**
+ * Interface del panel lateral de Asesores (Disponibilidad y Nivel 1).
+ * @interface AdvisorSidebarProps
+ */
 interface AdvisorSidebarProps {
+  /** Array de asesores conectados detectados en DB/WS. */
   asesoresSoporte: AsesorSoporte[];
+  /** Controla que Popup se ve para auto setear "EN_DESCANSO", etc. */
   openAdvisorDropdown: number | null;
+  /** Función para mutar el dropdown de Asesor activo. */
   setOpenAdvisorDropdown: (id: number | null) => void;
+  /** Hook PATCH para persistir el cambio de status de Asesor en Django. */
   handleCambioEstadoAsesor: (id: number, estado: string) => void;
+  /** Variable de tema oscuro base para paneles laterales. */
   variant?: 'emerald' | 'amber';
+  /** Evita clicks / Cambios (usado para cuando solo queremos espiar). */
   readOnly?: boolean;
 }
 
+/**
+ * Componente SidebarAsesores
+ * 
+ * Barra lateral derecha/izquierda para mostrar en tiempo real quién está conectado (Soporte N1).
+ * Si no está readonly, permite modificar el status localmente.
+ * 
+ * @param {AdvisorSidebarProps} props - Variables estado/setters.
+ * @returns {JSX.Element} Panel tipo Drawer flotante.
+ */
 export default function SidebarAsesores({ 
   asesoresSoporte, 
   openAdvisorDropdown, 

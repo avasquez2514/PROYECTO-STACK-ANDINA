@@ -8,12 +8,26 @@ import { toast } from "sonner";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Página de Login (Administración)
+ * 
+ * Interfaz de autenticación exclusiva para el personal administrativo y soporte.
+ * Captura las credenciales (User/Pass) y las valida contra el endpoint JWT de Django.
+ * Si el acceso es correcto, almacena los tokens en Cookies y redirige al Dashboard Admin.
+ * 
+ * @returns {JSX.Element} Pantalla de login estilo terminal/HUD.
+ */
 export default function LoginPage() {
     const [credentials, setCredentials] = useState({ user: '', pass: '' });
     const [loginError, setLoginError] = useState(false);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
+    /**
+     * Handler de autenticación.
+     * Realiza un fetch al microservicio de tokens `/api/token/`.
+     * @param {React.FormEvent} e - Evento de formulario.
+     */
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);

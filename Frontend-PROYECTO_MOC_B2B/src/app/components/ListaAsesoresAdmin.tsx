@@ -4,14 +4,30 @@ import TemporizadorEstado from "./TemporizadorEstado";
 import { ESTADOS_CONFIG } from "../../constants";
 import { AsesorSoporte } from "../../types";
 
+/**
+ * Interface del listado de Asesores de la Home en la subvista del Administrador.
+ * @interface AdminAdvisorListProps
+ */
 interface AdminAdvisorListProps {
+  /** Array total de asesores conectados o registrados en la BD. */
   asesores: AsesorSoporte[];
+  /** Contexto visual actual (`dark` o `light`). */
   theme: string;
+  /** Función que a inyección computa dinámicamente Casos vs Cierres de la gestión hoy. */
   getStatsPerAsesor: (login: string) => { total: number; cierres: number; soportes: number };
 }
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente ListaAsesoresAdmin
+ * 
+ * Renderiza el listado grid pequeño de "Asesores Destacados/Activos" que se 
+ * ve al interior del panel de Administración, informando también el Operational Load.
+ * 
+ * @param {AdminAdvisorListProps} props
+ * @returns {JSX.Element} Grid responsivo con "Cartas de asesores".
+ */
 export default function ListaAsesoresAdmin({ asesores, theme, getStatsPerAsesor }: AdminAdvisorListProps) {
   const isLight = theme === 'light';
 

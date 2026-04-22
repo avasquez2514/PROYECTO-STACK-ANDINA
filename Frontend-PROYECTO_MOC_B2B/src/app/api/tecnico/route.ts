@@ -1,6 +1,18 @@
-// /app/api/tecnico/route.js
-import { NextResponse } from "next/server";
+/**
+ * Route Handler para la gestión de Técnicos
+ * 
+ * Funciona como un Proxy API que redirige las peticiones desde el cliente Next.js
+ * hacia el servidor backend de Django. Facilita la normalización de datos
+ * y previene problemas de CORS en entornos de desarrollo.
+ */
 
+/**
+ * Endpoint POST: Crea una nueva gestión de soporte.
+ * Transforma los objetos del formulario client-side al esquema esperado por Django Models.
+ * 
+ * @param {Request} req - Objeto de petición con los datos de gestión.
+ * @returns {Promise<NextResponse>} Respuesta JSON con éxito o error de Django.
+ */
 export async function POST(req: Request) {
   try {
     const data = await req.json();
@@ -54,6 +66,10 @@ export async function POST(req: Request) {
   }
 }
 
+/**
+ * Endpoint GET: Recupera el listado completo de registros de soporte de Django.
+ * @returns {Promise<NextResponse>} Lista de objetos Soporte.
+ */
 export async function GET() {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/soportes/`);

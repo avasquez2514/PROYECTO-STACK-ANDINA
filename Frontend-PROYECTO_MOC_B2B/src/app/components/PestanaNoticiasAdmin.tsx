@@ -2,15 +2,32 @@ import React from "react";
 import { Edit2, Trash2, BellRing, Megaphone } from "lucide-react";
 import { Noticia } from "../../types";
 
+/**
+ * Propiedades de la gestión de novedades/noticias.
+ * @interface AdminTabNoticiasProps
+ */
 interface AdminTabNoticiasProps {
+  /** Array de objetos Noticia. */
   noticias: Noticia[];
+  /** Tema visual. */
   theme: string;
+  /** Función para abrir el modal de creación/edición de noticias. */
   setModalConfig: (config: any) => void;
+  /** Ejecutor de cambios sobre el endpoint de noticias. */
   handleAction: (endpoint: string, method: string, id?: number, data?: any) => Promise<void>;
 }
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente PestanaNoticiasAdmin
+ * 
+ * Panel para la gestión de anuncios importantes (News ticker).
+ * Permite redactar nuevas noticias, editarlas, eliminarlas o activarlas/desactivarlas
+ * rápidamente mediante un interruptor de estado visual.
+ * 
+ * @param {AdminTabNoticiasProps} props
+ */
 export default function PestanaNoticiasAdmin({
   noticias,
   theme,

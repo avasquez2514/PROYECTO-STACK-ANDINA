@@ -2,13 +2,31 @@ import React from 'react';
 import { X, ClipboardList, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
+/**
+ * Interfaz de propiedades para el Modal de Soporte.
+ * @interface SoporteModalProps
+ */
 interface SoporteModalProps {
+  /** Configuración cargada del modal, maneja qué registro y template se muestran */
   modalConfig: { id: number; text: string; title: string; evidencias?: string[] } | null;
+  /** Función para actualizar el estado del modal (ej. cerrarlo o mutar texto en memoria) */
   setModalConfig: (config: { id: number; text: string; title: string; evidencias?: string[] } | null) => void;
+  /** Función callback que sincroniza los cambios de la plantilla editada con la base de datos */
   actualizarSoporte: (id: number, field: string, value: any) => Promise<void>;
+  /** Define si el modal debe funcionar solo para visualización (sin botón guardar) */
   readOnly?: boolean;
 }
 
+/**
+ * Componente ModalSoporte
+ * 
+ * Ventana emergente tipo Modal para previsualizar, editar y copiar la "Plantilla Técnica"
+ * o el resumen estructurado de los incidentes. Soporta renderizado y visualización expansible
+ * de evidencias fotográficas adjuntas por el técnico.
+ * 
+ * @param {SoporteModalProps} props - Propiedades de estado y mutación.
+ * @returns {JSX.Element | null} Interfaz emergente o nulo si no está activa.
+ */
 export default function ModalSoporte({ modalConfig, setModalConfig, actualizarSoporte, readOnly = false }: SoporteModalProps) {
   if (!modalConfig) return null;
 

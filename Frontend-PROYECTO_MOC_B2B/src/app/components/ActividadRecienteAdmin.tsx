@@ -1,13 +1,27 @@
 import React from "react";
 import { Soporte } from "../../types";
 
+/**
+ * Propiedades del feed de actividad reciente.
+ * @interface AdminRecentActivityProps
+ */
 interface AdminRecentActivityProps {
+  /** Array de gestiones extraídas directamente de la base de datos. */
   gestiones: Soporte[];
+  /** Tema visual. */
   theme: string;
 }
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente ActividadRecienteAdmin
+ * 
+ * Muestra un flujo vertical (feed) de las últimas 8 gestiones registradas.
+ * Proporciona un vistazo rápido de quién está trabajando y en qué tipo de gestión (Cierre/Asesoría).
+ * 
+ * @param {AdminRecentActivityProps} props
+ */
 export default function ActividadRecienteAdmin({ gestiones, theme }: AdminRecentActivityProps) {
   const isLight = theme === 'light';
 

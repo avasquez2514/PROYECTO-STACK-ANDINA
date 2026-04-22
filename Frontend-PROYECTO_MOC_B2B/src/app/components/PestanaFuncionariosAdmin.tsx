@@ -2,13 +2,30 @@ import React from "react";
 import { Edit2, Trash2 } from "lucide-react";
 import { Funcionario } from "../../types";
 
+/**
+ * Propiedades del componente PestanaFuncionariosAdmin.
+ * @interface AdminTabFuncionariosProps
+ */
 interface AdminTabFuncionariosProps {
+  /** Array de funcionarios/técnicos registrados en la plataforma. */
   funcionarios: Funcionario[];
+  /** String de búsqueda para filtrar por nombre. */
   busqueda: string;
+  /** Hook para configuración de modales CRUD. */
   setModalConfig: (config: any) => void;
+  /** Callback para ejecutar operaciones sobre la API de funcionarios. */
   handleAction: (endpoint: string, method: string, id?: number, data?: any) => Promise<void>;
 }
 
+/**
+ * Componente PestanaFuncionariosAdmin
+ * 
+ * Interfaz de administración para los usuarios finales (Funcionarios/Técnicos).
+ * Permite visualizar el listado completo, incluyendo sus credenciales (password)
+ * para soporte administrativo y acciones de edición o retiro del sistema.
+ * 
+ * @param {AdminTabFuncionariosProps} props
+ */
 export default function PestanaFuncionariosAdmin({
   funcionarios,
   busqueda,

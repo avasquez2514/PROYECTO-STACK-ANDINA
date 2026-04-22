@@ -4,16 +4,34 @@ import {
   Megaphone, ClipboardList, Sun, Moon, Trash2 
 } from "lucide-react";
 
+/**
+ * Propiedades del componente SidebarAdmin.
+ * @interface AdminSidebarProps
+ */
 interface AdminSidebarProps {
+  /** Tab que se encuentra activo actualmente. */
   activeTab: string;
+  /** Función para conmutar el tab activo. */
   setActiveTab: (tab: string) => void;
+  /** Valor del tema visual. */
   theme: string;
+  /** Función para alternar entre dark y light mode. */
   setTheme: (theme: string) => void;
+  /** Callback para liquidar la sesión. */
   handleLogout: () => void;
 }
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente SidebarAdmin
+ * 
+ * Navegación lateral persistente para la vista de Administrador.
+ * Agrupa los accesos directos a Dashboard, Gestión de Usuarios, Históricos y Auditoría.
+ * También aloja el switch de tema y el botón de salida.
+ * 
+ * @param {AdminSidebarProps} props
+ */
 export default function SidebarAdmin({
   activeTab,
   setActiveTab,

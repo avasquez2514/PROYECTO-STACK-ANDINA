@@ -21,6 +21,16 @@ import { toast } from "sonner";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Componente Principal `SoportePage`
+ * 
+ * Console principal destinada al equipo de Soporte (Nivel 1).
+ * Similar al tablero de despacho, pero posee permisos absolutos de edición:
+ * Permite reasignar tickets, forzar el control del status (en gestión, resuelto),
+ * interactuar en el Chat bidireccional y modificar plantillas técnicas en vivo.
+ * 
+ * @returns {JSX.Element} Aplicativo completo / vista de Soporte.
+ */
 export default function SoportePage() {
   const [datos, setDatos] = useState<Soporte[]>([]);
   const [asesoresSoporte, setAsesoresSoporte] = useState<AsesorSoporte[]>([]);
@@ -61,6 +71,10 @@ export default function SoportePage() {
     return () => socket.close();
   }, []);
 
+  /**
+   * Refresco sincrono general de la tabla principal de Soportes (Incidentes).
+   * Ordena y renderiza desde el ID más antiguo al más nuevo.
+   */
   const cargarDatos = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/soporte/`);
@@ -90,6 +104,13 @@ export default function SoportePage() {
     } catch (e) { console.error(e); }
   };
 
+  /**
+   * Endpoint PATCH de modificación integral de Incidentes.
+   * Usado para alterar el dropwdown local de estado y reasignación de LoginN1.
+   * @param {number} id - Clave primaria (PK)
+   * @param {string} field - Propiedad a modificar. E.X. `login_n1`
+   * @param {any} value - Transición de valor final a inyectar
+   */
   const actualizarSoporte = async (id: number, field: string, value: any) => {
     try {
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/soporte/${id}/`, {

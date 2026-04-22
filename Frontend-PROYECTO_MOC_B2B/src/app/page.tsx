@@ -6,6 +6,15 @@ import Link from "next/link";
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(" ");
 
+/**
+ * Página de Lanzamiento (Landing Page)
+ * 
+ * Punto de entrada principal (`/`) de la aplicación SIMOC.
+ * Funciona como un orquestador de módulos que presenta los accesos directos
+ * a las 4 consolas operativas: Técnicos, Soporte, Despacho y Administración.
+ * 
+ * @returns {JSX.Element} Menú de selección de módulos.
+ */
 const LandingPage = () => {
   const modules = [
     { 
